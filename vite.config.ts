@@ -17,8 +17,9 @@ export default defineConfig(({ command }) => ({
             },
         }),
         tailwindcss(),
-        // Only run wayfinder during development ('serve')
-        // This avoids the "php: not found" error during the 'build' command
-        ...(command !== 'build' ? [wayfinder({ formVariants: true })] : []),
+        // Wayfinder generates TypeScript types for routes
+        // Generated files are committed to git, so this runs during dev
+        // and the generated files are available during build
+        wayfinder({ formVariants: true }),
     ],
 }));
