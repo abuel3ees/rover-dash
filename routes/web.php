@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ControlController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RoverController;
@@ -36,6 +37,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Camera stream proxy
     Route::get('rover/stream', [StreamController::class, 'proxy'])->name('rover.stream');
+
+    // Chat
+    Route::get('chat', [ChatController::class, 'index'])->name('chat');
+    Route::post('chat', [ChatController::class, 'store'])->name('chat.store');
 });
 
 require __DIR__.'/settings.php';

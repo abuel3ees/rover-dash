@@ -16,6 +16,8 @@ class DashboardController extends Controller
             return Inertia::render('dashboard', [
                 'rover' => null,
                 'latestTelemetry' => null,
+                'recentCommands' => null,
+                'stats' => null,
             ]);
         }
 
@@ -29,6 +31,12 @@ class DashboardController extends Controller
                 'battery' => $rover->latestTelemetry('battery'),
                 'temperature' => $rover->latestTelemetry('temperature'),
                 'accelerometer' => $rover->latestTelemetry('accelerometer'),
+            ],
+            'recentCommands' => $rover->commands()->latest()->limit(8)->get(),
+            'stats' => [
+                'totalCommands' => $rover->commands()->count(),
+                'totalTelemetry' => $rover->telemetryData()->count(),
+                'uptime' => $rover->last_seen_at?->diffForHumans(),
             ],
         ]);
     }
