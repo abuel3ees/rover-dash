@@ -1,0 +1,32 @@
+# Rover Pi Client Requirements
+# Install with: pip install -r requirements.txt
+
+# Socket.IO client for real-time communication
+python-socketio[client]==5.10.0
+
+# HTTP client
+requests==2.31.0
+
+# Async support
+python-engineio==4.9.0
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# Raspberry Pi specific
+RPi.GPIO==0.7.0
+board==1.0.0
+
+# Sensors
+# MPU6050 Accelerometer/Gyroscope
+adafruit-circuitpython-mpu6050==1.13.1
+
+# ADS1115 ADC for battery monitoring
+adafruit-circuitpython-ads1x15==2.2.14
+
+# Camera support (optional, uncomment for pi camera)
+# picamera2==0.3.13
+# picamera==1.13
+
+# Utilities
+pytz==2024.1

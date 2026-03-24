@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { ChevronDown, ChevronUp, Download, Zap, Wifi, Terminal, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, Zap, Wifi, Terminal, RotateCcw, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -35,7 +35,7 @@ const steps: Step[] = [
         details: [
             'Insert SD card into Raspberry Pi',
             'Connect USB-C power cable',
-            'Connect Ethernet or WiFi',
+            'Connect to your network (WiFi or Ethernet)',
             'Connect HDMI to monitor (optional)',
             'Connect keyboard & mouse (optional)',
             'Wait 2-3 minutes for first boot',
@@ -43,33 +43,49 @@ const steps: Step[] = [
     },
     {
         number: 3,
-        title: 'Network Setup',
-        description: 'Configure network and find your Pi',
+        title: 'Find Your Pi IP Address',
+        description: 'Locate Pi on your network',
         icon: <Wifi className="size-5" />,
         details: [
-            'Find Pi IP address: ping raspberrypi.local',
-            'Or check your router for connected devices',
-            'SSH into Pi: ssh pi@raspberrypi.local',
+            'Check your WiFi router admin panel',
+            'Look for device name "raspberrypi"',
+            'Note the IP address (e.g., 192.168.1.50)',
+            'OR scan your network: nmap -sn 192.168.1.0/24',
+            'OR connect a monitor and run: hostname -I',
+            'SSH into Pi: ssh pi@<IP_ADDRESS>',
             'Default password: raspberry',
-            'Run: sudo raspi-config',
-            'Go to System > Hostname (set to "rover-01")',
         ],
     },
     {
         number: 4,
-        title: 'System Updates',
-        description: 'Update software packages',
-        icon: <RotateCcw className="size-5" />,
+        title: 'Configure Hostname & Network',
+        description: 'Set up Pi identity on your network',
+        icon: <Terminal className="size-5" />,
         details: [
-            'sudo apt update',
-            'sudo apt upgrade -y',
-            'sudo apt install -y git python3-pip',
-            'sudo apt install -y libatlas-base-dev',
-            'Reboot: sudo reboot',
+            'SSH into your Pi first',
+            'Run: sudo raspi-config',
+            'Go to System > Hostname',
+            'Change to "rover-01" (or your preferred name)',
+            'Go to Localization > Timezone (set your timezone)',
+            'Select Finish and reboot: sudo reboot',
         ],
     },
     {
         number: 5,
+        title: 'System Updates',
+        description: 'Update software packages',
+        icon: <RotateCcw className="size-5" />,
+        details: [
+            'SSH back in after reboot',
+            'sudo apt update',
+            'sudo apt upgrade -y',
+            'sudo apt install -y git python3-pip',
+            'sudo apt install -y libatlas-base-dev libjasper-dev',
+            'Reboot: sudo reboot',
+        ],
+    },
+    {
+        number: 6,
         title: 'Clone Repository',
         description: 'Get the rover control software',
         icon: <Terminal className="size-5" />,
@@ -83,31 +99,48 @@ const steps: Step[] = [
         ],
     },
     {
-        number: 6,
-        title: 'Configure Remote Dashboard',
+        number: 7,
+        title: 'Configure Remote Dashboard Connection',
         description: 'Setup connection to your web dashboard',
-        icon: <Terminal className="size-5" />,
+        icon: <AlertCircle className="size-5" />,
         details: [
-            'Copy config template: cp config.example.py config.py',
+            'Copy config: cp config.example.py config.py',
             'Edit: nano config.py',
             'Set ROVER_NAME=rover-01',
-            'Set DASHBOARD_URL=http://your-domain.com (or IP:port)',
-            'Generate API token from dashboard settings',
-            'Set API_TOKEN in config.py',
-            'Save and exit (Ctrl+X, Y, Enter)',
+            'Set DASHBOARD_URL=http://YOUR_DOMAIN_OR_IP:PORT',
+            'Example: DASHBOARD_URL=http://192.168.1.100:8080',
+            'Generate API token from dashboard Settings > API',
+            'Set API_TOKEN in config.py with your token',
+            'Save (Ctrl+X, Y, Enter)',
         ],
     },
     {
-        number: 7,
-        title: 'Start Rover Client',
-        description: 'Launch the rover and verify connection',
+        number: 8,
+        title: 'Test Connection',
+        description: 'Launch rover and verify dashboard connection',
         icon: <Terminal className="size-5" />,
         details: [
-            'python3 main.py',
-            'Wait for "Connected to server" message',
-            'Open your web dashboard and verify rover appears online',
+            'Activate venv: source venv/bin/activate',
+            'Start rover: python3 main.py',
+            'Look for "Connected to server" message',
+            'Open dashboard in browser at your domain/IP',
+            'Verify rover appears in online devices list',
             'Test controls: move forward/backward/left/right',
-            'To run as service: sudo systemctl enable rover',
+            'Press Ctrl+C to stop the rover client',
+        ],
+    },
+    {
+        number: 9,
+        title: 'Run as System Service (Optional)',
+        description: 'Auto-start rover on Pi boot',
+        icon: <Zap className="size-5" />,
+        details: [
+            'Create service file: sudo nano /etc/systemd/system/rover.service',
+            'Paste the service configuration (see docs)',
+            'Enable service: sudo systemctl enable rover',
+            'Start service: sudo systemctl start rover',
+            'Check status: sudo systemctl status rover',
+            'View logs: sudo journalctl -u rover -f',
         ],
     },
 ];
@@ -162,11 +195,25 @@ export default function SetupPage() {
         <div className="min-h-screen bg-background">
             <div className="container max-w-4xl mx-auto px-4 py-12">
                 {/* Header */}
-                <div className="mb-12 text-center">
+                <div className="mb-12">
                     <h1 className="text-4xl font-bold text-foreground mb-4">Rover Setup Guide</h1>
-                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                        Complete step-by-step instructions to set up your Raspberry Pi rover and connect it to the dashboard.
+                    <p className="text-lg text-muted-foreground max-w-2xl mb-6">
+                        Complete step-by-step instructions to set up your Raspberry Pi rover and connect it to your remote dashboard.
                     </p>
+                    
+                    {/* Network Info Box */}
+                    <div className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4 mb-6">
+                        <div className="flex gap-3">
+                            <AlertCircle className="size-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                            <div>
+                                <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">Remote Network Setup</h3>
+                                <p className="text-sm text-orange-800 dark:text-orange-200">
+                                    Your dashboard is hosted on a web server. The Raspberry Pi will connect to it from a different network. 
+                                    Make sure to use your server's public IP or domain name in Step 7 (not localhost).
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Steps */}
@@ -187,7 +234,7 @@ export default function SetupPage() {
                     <p className="text-muted-foreground mb-6">
                         If you encounter any issues during setup, check the documentation or reach out to support.
                     </p>
-                    <div className="flex gap-3 justify-center">
+                    <div className="flex gap-3 justify-center flex-wrap">
                         <Button variant="default" asChild>
                             <a href="https://github.com/abuel3ees/rover-pi-client" target="_blank" rel="noopener noreferrer">
                                 GitHub Repository
