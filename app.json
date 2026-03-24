@@ -1,0 +1,28 @@
+{
+  "name": "Rover Dashboard",
+  "description": "Real-time rover telemetry and control dashboard",
+  "keywords": ["laravel", "php", "react", "dashboard"],
+  "buildpacks": [
+    {
+      "url": "heroku/php"
+    },
+    {
+      "url": "heroku/nodejs"
+    }
+  ],
+  "env": {
+    "APP_KEY": {
+      "description": "Laravel application key",
+      "generator": "secret"
+    },
+    "APP_ENV": {
+      "value": "production"
+    },
+    "APP_DEBUG": {
+      "value": "false"
+    }
+  },
+  "scripts": {
+    "postdeploy": "php artisan migrate --force && php artisan db:seed --class=DatabaseSeeder"
+  }
+}

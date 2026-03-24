@@ -17,8 +17,7 @@ export default defineConfig({
             },
         }),
         tailwindcss(),
-        wayfinder({
-            formVariants: true,
-        }),
+        // Only load wayfinder if PHP is available (skip in CI/CD where PHP runs after Node)
+        ...(process.env.SKIP_WAYFINDER !== 'true' ? [wayfinder({ formVariants: true })] : []),
     ],
 });
