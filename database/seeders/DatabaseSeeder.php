@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Conversation;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -35,5 +36,18 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'password'=> bcrypt('password'),
         ]);
+
+        // Create the broadcast conversation
+        $broadcast = Conversation::create([
+            'type' => 'broadcast',
+            'name' => null,
+            'created_by' => null,
+        ]);
+
+        // Add all users to the broadcast conversation
+        $users = User::all();
+        foreach ($users as $user) {
+            $broadcast->participants()->attach($user->id, ['joined_at' => now()]);
+        }
     }
 }

@@ -1,7 +1,8 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import whisper from './whisper'
 /**
 * @see \App\Http\Controllers\ChatController::store
-* @see app/Http/Controllers/ChatController.php:29
+* @see app/Http/Controllers/ChatController.php:30
 * @route '/chat'
 */
 export const store = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +17,7 @@ store.definition = {
 
 /**
 * @see \App\Http\Controllers\ChatController::store
-* @see app/Http/Controllers/ChatController.php:29
+* @see app/Http/Controllers/ChatController.php:30
 * @route '/chat'
 */
 store.url = (options?: RouteQueryOptions) => {
@@ -25,7 +26,7 @@ store.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ChatController::store
-* @see app/Http/Controllers/ChatController.php:29
+* @see app/Http/Controllers/ChatController.php:30
 * @route '/chat'
 */
 store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +36,7 @@ store.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\ChatController::store
-* @see app/Http/Controllers/ChatController.php:29
+* @see app/Http/Controllers/ChatController.php:30
 * @route '/chat'
 */
 const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +46,7 @@ const storeForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => 
 
 /**
 * @see \App\Http\Controllers\ChatController::store
-* @see app/Http/Controllers/ChatController.php:29
+* @see app/Http/Controllers/ChatController.php:30
 * @route '/chat'
 */
 storeForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -57,6 +58,7 @@ store.form = storeForm
 
 const chat = {
     store: Object.assign(store, store),
+    whisper: Object.assign(whisper, whisper),
 }
 
 export default chat

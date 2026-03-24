@@ -14,15 +14,16 @@ class ChatController extends Controller
 {
     public function index(): Response
     {
-        $messages = ChatMessage::with('user:id,name')
-            ->latest()
-            ->limit(100)
-            ->get()
-            ->reverse()
-            ->values();
+        $user = auth()->user();
+        $rover = $user->rover;
+        $latestBattery = $rover?->latestTelemetry('battery');
+        $latestTemp = $rover?->latestTelemetry('temperature');
 
         return Inertia::render('chat', [
-            'messages' => $messages,
+            'messages' => [],
+            'rover' => $rover,
+            'latestBattery' => $latestBattery,
+            'latestTemp' => $latestTemp,
         ]);
     }
 
@@ -32,17 +33,12 @@ class ChatController extends Controller
             'body' => 'required|string|max:1000',
         ]);
 
-        $message = ChatMessage::create([
-            'user_id' => $request->user()->id,
-            'body' => $validated['body'],
-        ]);
-
-        $message->load('user:id,name');
+        $user = $request->user();
 
         try {
-            broadcast(new ChatMessageSent($message))->toOthers();
+            broadcast(new ChatMessageSent($user, $validated['body']))->toOthers();
         } catch (BroadcastException) {
-            // Reverb not running — message is saved, just not broadcast
+            // Reverb not running — just silently fail, message isn't persisted anyway
         }
 
         return back();

@@ -2,31 +2,32 @@
 
 namespace App\Events;
 
-use App\Models\ChatMessage;
-use Illuminate\Broadcasting\Channel;
+use App\Models\User;
+use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
 class ChatMessageSent implements ShouldBroadcastNow
 {
     public function __construct(
-        public ChatMessage $message,
+        private User $user,
+        private string $body,
     ) {}
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PresenceChannel
     {
-        return new Channel('chat');
+        return new PresenceChannel('chat');
     }
 
     public function broadcastWith(): array
     {
         return [
-            'id' => $this->message->id,
+            'id' => uniqid(),
             'user' => [
-                'id' => $this->message->user->id,
-                'name' => $this->message->user->name,
+                'id' => $this->user->id,
+                'name' => $this->user->name,
             ],
-            'body' => $this->message->body,
-            'created_at' => $this->message->created_at->toISOString(),
+            'body' => $this->body,
+            'created_at' => now()->toISOString(),
         ];
     }
 }
