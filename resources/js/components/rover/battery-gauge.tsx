@@ -15,7 +15,7 @@ export function BatteryGauge({
         );
     }
 
-    const percentage = Math.min(100, Math.max(0, data.percentage));
+    const percentage = Math.min(100, Math.max(0, data.percentage ?? 0));
     const color =
         percentage > 50
             ? 'bg-green-500'
@@ -35,7 +35,7 @@ export function BatteryGauge({
                     <span className="text-2xl font-bold">{percentage}%</span>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                    {data.voltage}V
+                    {data.voltage?.toFixed(2) ?? '--'}V
                 </span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">

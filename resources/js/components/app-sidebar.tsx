@@ -4,6 +4,7 @@ import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { SetupGuide } from '@/components/sidebar/setup-guide';
 import {
     Sidebar,
     SidebarContent,
@@ -69,6 +70,9 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <div className="px-4 py-6 border-t border-sidebar-border">
+                    <SetupGuide />
+                </div>
             </SidebarContent>
 
             <SidebarFooter>

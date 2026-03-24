@@ -40,6 +40,17 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Restrict login to authorized emails
+        Fortify::authenticateUsing(function (Request $request) {
+            $allowedEmails = ['ham@rover.com', 'mir@rover.com', 'dev@rover.com'];
+
+            if (!in_array($request->email, $allowedEmails)) {
+                return null;
+            }
+
+            return null; // Let Laravel handle the normal authentication
+        });
     }
 
     /**

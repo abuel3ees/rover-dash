@@ -15,7 +15,8 @@ export function TemperatureDisplay({
         );
     }
 
-    const cpuWarning = data.cpu_temp > 70;
+    const cpuTemp = data.cpu_temp ?? 0;
+    const cpuWarning = cpuTemp > 70;
 
     return (
         <div className="space-y-2">
@@ -27,14 +28,14 @@ export function TemperatureDisplay({
                 <span
                     className={`text-2xl font-bold ${cpuWarning ? 'text-red-500' : ''}`}
                 >
-                    {data.cpu_temp}°C
+                    {cpuTemp.toFixed(1)}°C
                 </span>
             </div>
             <div className="flex items-center gap-2">
                 <Thermometer className="size-4" />
                 <span className="text-sm text-muted-foreground">Ambient</span>
                 <span className="text-lg font-semibold">
-                    {data.ambient_temp}°C
+                    {(data.ambient_temp ?? 0).toFixed(1)}°C
                 </span>
             </div>
         </div>

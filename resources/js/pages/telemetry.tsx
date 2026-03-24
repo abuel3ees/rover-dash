@@ -134,7 +134,7 @@ export default function Telemetry({
                                             X
                                         </span>
                                         <div className="font-mono font-semibold">
-                                            {accelerometer.x.toFixed(2)}
+                                            {accelerometer.x?.toFixed(2) ?? '--'}
                                         </div>
                                     </div>
                                     <div>
@@ -142,7 +142,7 @@ export default function Telemetry({
                                             Y
                                         </span>
                                         <div className="font-mono font-semibold">
-                                            {accelerometer.y.toFixed(2)}
+                                            {accelerometer.y?.toFixed(2) ?? '--'}
                                         </div>
                                     </div>
                                     <div>
@@ -150,7 +150,7 @@ export default function Telemetry({
                                             Z
                                         </span>
                                         <div className="font-mono font-semibold">
-                                            {accelerometer.z.toFixed(2)}
+                                            {accelerometer.z?.toFixed(2) ?? '--'}
                                         </div>
                                     </div>
                                 </div>
@@ -158,13 +158,17 @@ export default function Telemetry({
                                     <span>
                                         Pitch:{' '}
                                         <strong>
-                                            {accelerometer.pitch.toFixed(1)}°
+                                            {accelerometer.pitch !== undefined && accelerometer.pitch !== null
+                                                ? `${accelerometer.pitch.toFixed(1)}°`
+                                                : '--'}
                                         </strong>
                                     </span>
                                     <span>
                                         Roll:{' '}
                                         <strong>
-                                            {accelerometer.roll.toFixed(1)}°
+                                            {accelerometer.roll !== undefined && accelerometer.roll !== null
+                                                ? `${accelerometer.roll.toFixed(1)}°`
+                                                : '--'}
                                         </strong>
                                     </span>
                                 </div>
