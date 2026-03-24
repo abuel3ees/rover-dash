@@ -14,14 +14,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create the three authorized users
-        User::factory()->create([
+        User::create([
             'name' => 'Hamza',
             'email' => 'ham@rover.com',
             'email_verified_at' => now(),
             'password'=> bcrypt('password'),
         ]);
 
-        User::factory()->create([
+        User::create([
             'name' => 'Mir',
             'email' => 'mir@rover.com',
             
@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
             'password'=> bcrypt('password'),
         ]);
 
-        User::factory()->create([
+        User::create([
             'name' => 'Developer',
             'email' => 'dev@rover.com',
             'email_verified_at' => now(),
