@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
     plugins: [
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.tsx'],
@@ -17,7 +17,8 @@ export default defineConfig({
             },
         }),
         tailwindcss(),
-        // Only load wayfinder if PHP is available (skip in CI/CD where PHP runs after Node)
-        ...(process.env.SKIP_WAYFINDER !== 'true' ? [wayfinder({ formVariants: true })] : []),
+        // Only run wayfinder during development ('serve')
+        // This avoids the "php: not found" error during the 'build' command
+        ...(command !== 'build' ? [wayfinder({ formVariants: true })] : []),
     ],
-});
+}));
