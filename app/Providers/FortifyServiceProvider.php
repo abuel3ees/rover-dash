@@ -41,7 +41,7 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
 
-        // Restrict login to authorized emails
+        // Restrict login to authorized emails and authenticate
         Fortify::authenticateUsing(function (Request $request) {
             $allowedEmails = ['ham@rover.com', 'mir@rover.com', 'dev@rover.com'];
 
@@ -49,7 +49,14 @@ class FortifyServiceProvider extends ServiceProvider
                 return null;
             }
 
-            return null; // Let Laravel handle the normal authentication
+            // Authenticate with email and password
+            $user = \App\Models\User::where('email', $request->email)->first();
+
+            if ($user && \Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+                return $user;
+            }
+
+            return null;
         });
     }
 

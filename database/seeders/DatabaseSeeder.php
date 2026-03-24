@@ -15,21 +15,25 @@ class DatabaseSeeder extends Seeder
     {
         // Create the three authorized users
         User::factory()->create([
-            'name' => 'Hamad',
+            'name' => 'Hamza',
             'email' => 'ham@rover.com',
             'email_verified_at' => now(),
+            'password'=> bcrypt('password'),
         ]);
 
         User::factory()->create([
             'name' => 'Mir',
             'email' => 'mir@rover.com',
+            
             'email_verified_at' => now(),
+            'password'=> bcrypt('password'),
         ]);
 
         User::factory()->create([
             'name' => 'Developer',
             'email' => 'dev@rover.com',
             'email_verified_at' => now(),
+            'password'=> bcrypt('password'),
         ]);
     }
 }
