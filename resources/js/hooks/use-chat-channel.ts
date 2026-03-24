@@ -16,11 +16,15 @@ export function useChatChannel(
     onMessage: (data: ChatMessagePayload) => void,
 ) {
     useEffect(() => {
+        if (!echo) return;
+
         const channel = echo.channel('chat');
         channel.listen('.ChatMessageSent', onMessage);
 
         return () => {
-            echo.leave('chat');
+            if (echo) {
+                echo.leave('chat');
+            }
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }

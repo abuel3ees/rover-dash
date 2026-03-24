@@ -36,7 +36,7 @@ export function useRoverChannel(
     },
 ) {
     useEffect(() => {
-        if (!roverId) return;
+        if (!roverId || !echo) return;
 
         const channel = echo.channel(`rover.${roverId}`);
 
@@ -54,7 +54,9 @@ export function useRoverChannel(
         }
 
         return () => {
-            echo.leave(`rover.${roverId}`);
+            if (echo) {
+                echo.leave(`rover.${roverId}`);
+            }
         };
     }, [roverId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
