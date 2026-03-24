@@ -37,7 +37,7 @@ export function useConversationChannel(
 
         return () => {
             if (echo) {
-                echo.leavePrivateChannel('conversation.' + conversationId);
+                echo.leave('conversation.' + conversationId);
             }
         };
     }, [conversationId, callbacks.onMessage, callbacks.onMessageUpdated, callbacks.onMessageDeleted, callbacks.onReactionUpdated, callbacks.onMessagePinned, callbacks.onConversationRead, callbacks.onTyping]);

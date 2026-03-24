@@ -24,7 +24,7 @@ export function useWhisperChannel(
 
         return () => {
             if (echo) {
-                echo.leavePrivateChannel('chat.whisper.' + userId);
+                echo.leave('chat.whisper.' + userId);
             }
         };
     }, [userId, onWhisper]);
