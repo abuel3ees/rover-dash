@@ -1,14 +1,13 @@
 import { Link } from '@inertiajs/react';
-import { Activity, BookOpen, FolderGit2, Gamepad2, LayoutGrid, MessageCircle } from 'lucide-react';
+import { Activity, Gamepad2, LayoutGrid, MessageCircle, BookOpen } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
-import { SetupGuide } from '@/components/sidebar/setup-guide';
 import {
     Sidebar,
     SidebarContent,
     SidebarFooter,
+    SidebarGroup,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -34,21 +33,16 @@ const mainNavItems: NavItem[] = [
         icon: Activity,
     },
     {
-        title: 'Chat',
-        href: '/chat',
+        title: 'Messaging',
+        href: '/messaging',
         icon: MessageCircle,
     },
 ];
 
-const footerNavItems: NavItem[] = [
+const secondaryItems: NavItem[] = [
     {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
+        title: 'Setup Guide',
+        href: '/setup',
         icon: BookOpen,
     },
 ];
@@ -70,13 +64,23 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
-                <div className="px-4 py-6 border-t border-sidebar-border">
-                    <SetupGuide />
-                </div>
+                <SidebarGroup className="px-2 py-0 mt-auto">
+                    <SidebarMenu>
+                        {secondaryItems.map((item) => (
+                            <SidebarMenuItem key={item.title}>
+                                <SidebarMenuButton asChild>
+                                    <Link href={item.href} prefetch>
+                                        {item.icon && <item.icon />}
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        ))}
+                    </SidebarMenu>
+                </SidebarGroup>
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

@@ -380,6 +380,87 @@ dashboardForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> =
 dashboard.form = dashboardForm
 
 /**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+export const setup = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: setup.url(options),
+    method: 'get',
+})
+
+setup.definition = {
+    methods: ["get","head"],
+    url: '/setup',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+setup.url = (options?: RouteQueryOptions) => {
+    return setup.definition.url + queryParams(options)
+}
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+setup.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: setup.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+setup.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: setup.url(options),
+    method: 'head',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+const setupForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: setup.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+setupForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: setup.url(options),
+    method: 'get',
+})
+
+/**
+* @see \Inertia\Controller::__invoke
+* @see vendor/inertiajs/inertia-laravel/src/Controller.php:13
+* @route '/setup'
+*/
+setupForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: setup.url({
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+setup.form = setupForm
+
+/**
 * @see \App\Http\Controllers\ControlController::control
 * @see app/Http/Controllers/ControlController.php:15
 * @route '/control'

@@ -14,7 +14,9 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">
+                Navigation
+            </SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>
@@ -24,8 +26,10 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
                             tooltip={{ children: item.title }}
                         >
                             <Link href={item.href} prefetch>
-                                {item.icon && <item.icon />}
-                                <span>{item.title}</span>
+                                {item.icon && <item.icon className="size-4" />}
+                                <span className="text-sm tracking-wide">
+                                    {item.title}
+                                </span>
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

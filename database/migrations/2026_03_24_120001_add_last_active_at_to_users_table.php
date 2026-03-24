@@ -10,13 +10,14 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->timestamp('last_active_at')->nullable();
+            $table->string('avatar')->nullable();
         });
     }
 
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('last_active_at');
+            $table->dropColumn(['last_active_at', 'avatar']);
         });
     }
 };

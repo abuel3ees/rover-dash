@@ -20,8 +20,11 @@ class ConversationController extends Controller
                 'participants:id,name,avatar',
                 'latestMessage.user:id,name,avatar',
             ])
-            ->orderByDesc('messages.created_at')
             ->get()
+            ->sortByDesc(function ($conversation) {
+                return $conversation->latestMessage?->created_at ?? $conversation->created_at;
+            })
+            ->values()
             ->map(function ($conversation) use ($user) {
                 return [
                     'id' => $conversation->id,

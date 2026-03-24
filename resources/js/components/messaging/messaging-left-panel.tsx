@@ -1,7 +1,6 @@
-import { Plus, MessageCircle } from 'lucide-react';
+import { Plus, Search, Radio, MessageSquare, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Separator } from '@/components/ui/separator';
 import { ConversationListItem } from './conversation-list-item';
 import type { Conversation } from '@/types/messaging';
 
@@ -34,108 +33,142 @@ export function MessagingLeftPanel({
     );
 
     return (
-        <div className="flex flex-col h-full gap-4 p-4">
-            {/* Search */}
-            <Input
-                placeholder="Search conversations..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="h-8"
-            />
+        <div className="flex flex-col h-full bg-card/30">
+            {/* Header */}
+            <div className="p-4 pb-3">
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-semibold tracking-tight">Messages</h2>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                        onClick={onNewDm}
+                        title="New conversation"
+                    >
+                        <Plus className="size-4" />
+                    </Button>
+                </div>
 
-            {/* Broadcast */}
-            {broadcast && searchQuery === '' && (
-                <>
+                {/* Search */}
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                    <Input
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        className="h-8 pl-8 text-xs bg-muted/50 border-0 rounded-lg focus-visible:ring-1 focus-visible:ring-primary/30"
+                    />
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-4">
+                {/* Broadcast */}
+                {broadcast && searchQuery === '' && (
                     <div>
-                        <h3 className="text-xs font-semibold text-muted-foreground mb-2 px-2">
-                            BROADCAST
-                        </h3>
+                        <div className="flex items-center gap-1.5 px-2 mb-1.5">
+                            <Radio className="size-3 text-muted-foreground" />
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                Broadcast
+                            </span>
+                        </div>
                         <ConversationListItem
                             conversation={broadcast}
                             isActive={activeConversationId === broadcast.id}
-                            onClick={() =>
-                                onSelectConversation(broadcast.id)
-                            }
+                            onClick={() => onSelectConversation(broadcast.id)}
                         />
                     </div>
-                    <Separator />
-                </>
-            )}
+                )}
 
-            {/* DMs */}
-            {(searchQuery === '' || dms.some((d) => filtered.includes(d))) && (
-                <div>
-                    <div className="flex items-center justify-between px-2 mb-2">
-                        <h3 className="text-xs font-semibold text-muted-foreground">
-                            DIRECT MESSAGES
-                        </h3>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-6"
-                            onClick={onNewDm}
-                            title="New DM"
-                        >
-                            <Plus className="size-3" />
-                        </Button>
-                    </div>
-                    <div className="space-y-1">
-                        {(searchQuery === '' ? dms : filtered.filter((c) => c.type === 'dm')).map(
-                            (dm) => (
+                {/* DMs */}
+                {(searchQuery === '' ||
+                    dms.some((d) => filtered.includes(d))) && (
+                    <div>
+                        <div className="flex items-center justify-between px-2 mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                                <MessageSquare className="size-3 text-muted-foreground" />
+                                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Direct Messages
+                                </span>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-5 rounded-md hover:bg-primary/10 hover:text-primary"
+                                onClick={onNewDm}
+                                title="New DM"
+                            >
+                                <Plus className="size-3" />
+                            </Button>
+                        </div>
+                        <div className="space-y-0.5">
+                            {(searchQuery === ''
+                                ? dms
+                                : filtered.filter((c) => c.type === 'dm')
+                            ).map((dm) => (
                                 <ConversationListItem
                                     key={dm.id}
                                     conversation={dm}
                                     isActive={activeConversationId === dm.id}
-                                    onClick={() =>
-                                        onSelectConversation(dm.id)
-                                    }
+                                    onClick={() => onSelectConversation(dm.id)}
                                 />
-                            ),
-                        )}
+                            ))}
+                            {dms.length === 0 && (
+                                <button
+                                    onClick={onNewDm}
+                                    className="w-full flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground hover:text-primary transition-colors rounded-xl border border-dashed border-border/60 hover:border-primary/30 hover:bg-primary/5"
+                                >
+                                    <Plus className="size-3.5" />
+                                    Start a conversation
+                                </button>
+                            )}
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Groups */}
-            {(searchQuery === '' ||
-                groups.some((g) => filtered.includes(g))) && (
-                <div>
-                    <div className="flex items-center justify-between px-2 mb-2">
-                        <h3 className="text-xs font-semibold text-muted-foreground">
-                            GROUP CHATS
-                        </h3>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-6"
-                            onClick={onNewDm}
-                            title="New Group"
-                        >
-                            <Plus className="size-3" />
-                        </Button>
-                    </div>
-                    <div className="space-y-1">
-                        {(searchQuery === '' ? groups : filtered.filter((c) => c.type === 'group')).map(
-                            (group) => (
-                                <ConversationListItem
-                                    key={group.id}
-                                    conversation={group}
-                                    isActive={activeConversationId === group.id}
-                                    onClick={() =>
-                                        onSelectConversation(group.id)
-                                    }
-                                />
-                            ),
-                        )}
-                    </div>
-                </div>
-            )}
+                {/* Groups */}
+                {(searchQuery === '' ||
+                    groups.some((g) => filtered.includes(g))) &&
+                    groups.length > 0 && (
+                        <div>
+                            <div className="flex items-center justify-between px-2 mb-1.5">
+                                <div className="flex items-center gap-1.5">
+                                    <Users className="size-3 text-muted-foreground" />
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                        Groups
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="space-y-0.5">
+                                {(searchQuery === ''
+                                    ? groups
+                                    : filtered.filter(
+                                          (c) => c.type === 'group',
+                                      )
+                                ).map((group) => (
+                                    <ConversationListItem
+                                        key={group.id}
+                                        conversation={group}
+                                        isActive={
+                                            activeConversationId === group.id
+                                        }
+                                        onClick={() =>
+                                            onSelectConversation(group.id)
+                                        }
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-            {filtered.length === 0 && searchQuery !== '' && (
-                <p className="text-xs text-muted-foreground text-center py-4">
-                    No conversations found
-                </p>
-            )}
+                {filtered.length === 0 && searchQuery !== '' && (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <Search className="size-8 text-muted-foreground/30 mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                            No results for "{searchQuery}"
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

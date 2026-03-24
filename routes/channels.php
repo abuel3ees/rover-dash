@@ -28,11 +28,9 @@ Broadcast::private('conversation.{conversationId}', function ($user, $conversati
 
 // Presence channel for the messaging lobby (online status tracking)
 Broadcast::channel('messaging.lobby', function ($user) {
-    $user->update(['last_active_at' => now()]);
     return [
         'id' => $user->id,
         'name' => $user->name,
-        'avatar' => $user->avatar,
-        'last_active_at' => $user->last_active_at?->toIso8601String(),
+        'avatar' => $user->avatar ?? null,
     ];
 });

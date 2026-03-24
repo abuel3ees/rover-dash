@@ -127,33 +127,29 @@ const steps: Step[] = [
 
 function StepCard({ step, isExpanded, onToggle }: { step: Step; isExpanded: boolean; onToggle: () => void }) {
     return (
-        <div className="overflow-hidden rounded-lg border border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-border">
+        <div className="overflow-hidden rounded-lg border border-border/40 bg-card/50 transition-all hover:border-border/60">
             <button
                 onClick={onToggle}
-                className="w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-muted/30 transition-colors"
+                className="w-full px-3 py-2.5 flex items-start gap-3 text-left hover:bg-accent/30 transition-colors"
             >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary font-semibold text-sm shrink-0 mt-0.5">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-serif text-xs shrink-0 mt-0.5">
                     {step.number}
                 </div>
                 <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm text-foreground">{step.title}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
+                    <h3 className="text-xs font-medium tracking-wide text-foreground">{step.title}</h3>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 tracking-wide">{step.description}</p>
                 </div>
-                <div className="shrink-0 text-muted-foreground">
-                    {isExpanded ? (
-                        <ChevronUp className="size-4" />
-                    ) : (
-                        <ChevronDown className="size-4" />
-                    )}
+                <div className="shrink-0 text-muted-foreground/50">
+                    {isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
                 </div>
             </button>
 
             {isExpanded && (
-                <div className="border-t border-border/30 px-4 py-3 bg-muted/20">
-                    <ul className="space-y-2">
+                <div className="border-t border-border/30 px-3 py-2.5 bg-muted/20">
+                    <ul className="space-y-1.5">
                         {step.details.map((detail, idx) => (
-                            <li key={idx} className="flex gap-2 text-xs text-muted-foreground">
-                                <span className="text-primary/60 font-mono shrink-0">→</span>
+                            <li key={idx} className="flex gap-2 text-[10px] text-muted-foreground">
+                                <span className="text-primary/40 font-mono shrink-0">—</span>
                                 <span className="font-mono leading-relaxed">{detail}</span>
                             </li>
                         ))}
@@ -169,14 +165,16 @@ export function SetupGuide() {
 
     return (
         <div className="space-y-3">
-            <div className="space-y-1 px-1">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground/70">Setup Guide</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                    Step-by-step Raspberry Pi setup for rover control
+            <div className="space-y-0.5 px-1">
+                <h3 className="text-[10px] font-medium uppercase tracking-[0.15em] text-muted-foreground/70">
+                    Setup Guide
+                </h3>
+                <p className="text-[10px] text-muted-foreground/50 leading-relaxed tracking-wide">
+                    Raspberry Pi rover setup
                 </p>
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+            <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
                 {steps.map((step) => (
                     <StepCard
                         key={step.number}
@@ -185,11 +183,6 @@ export function SetupGuide() {
                         onToggle={() => setExpandedStep(expandedStep === step.number ? null : step.number)}
                     />
                 ))}
-            </div>
-
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400 space-y-1">
-                <p className="font-semibold">💡 Pro Tip</p>
-                <p>Automate deployment with: bash setup.sh from the repository</p>
             </div>
         </div>
     );

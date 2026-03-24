@@ -4,14 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
                 const appearance = '{{ $appearance ?? "system" }}';
-
                 if (appearance === 'system') {
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-
                     if (prefersDark) {
                         document.documentElement.classList.add('dark');
                     }
@@ -19,15 +16,9 @@
             })();
         </script>
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
-            html {
-                background-color: oklch(1 0 0);
-            }
-
-            html.dark {
-                background-color: oklch(0.145 0 0);
-            }
+            html { background-color: oklch(0.98 0.002 60); }
+            html.dark { background-color: oklch(0.12 0.01 260); }
         </style>
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
@@ -38,7 +29,7 @@
 
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,300..700;1,14..32,300..700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
