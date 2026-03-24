@@ -52,15 +52,15 @@ class ConversationController extends Controller
             });
 
         $allUsers = User::where('id', '!=', $user->id)
-            ->select('id', 'name', 'email', 'avatar', 'last_active_at')
+            ->select('id', 'name', 'email')
             ->get()
             ->map(fn ($u) => [
                 'id' => $u->id,
                 'name' => $u->name,
                 'email' => $u->email,
-                'avatar' => $u->avatar,
-                'is_online' => $u->isOnlineForChat(),
-                'last_active_at' => $u->last_active_at?->toIso8601String(),
+                'avatar' => null,
+                'is_online' => false,
+                'last_active_at' => null,
             ]);
 
         return Inertia::render('messaging', [

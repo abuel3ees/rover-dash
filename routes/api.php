@@ -30,3 +30,4 @@ Route::post('/rover/heartbeat', function (Request $request) {
     ]);
 });
 });
+});
