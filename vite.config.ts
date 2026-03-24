@@ -17,9 +17,9 @@ export default defineConfig(({ command }) => ({
             },
         }),
         tailwindcss(),
-        // Wayfinder generates TypeScript types for routes
-        // Generated files are committed to git, so this runs during dev
-        // and the generated files are available during build
-        wayfinder({ formVariants: true }),
+        // Only run wayfinder during development
+        // Generated files are committed to git and available during build
+        // This prevents "php: not found" error during production build
+        ...(command === 'serve' ? [wayfinder({ formVariants: true })] : []),
     ],
 }));
