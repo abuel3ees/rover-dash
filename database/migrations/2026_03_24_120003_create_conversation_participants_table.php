@@ -14,6 +14,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->unsignedBigInteger('last_read_message_id')->nullable();
             $table->timestamp('joined_at')->useCurrent();
+            $table->timestamps();
             $table->unique(['conversation_id', 'user_id']);
         });
     }
