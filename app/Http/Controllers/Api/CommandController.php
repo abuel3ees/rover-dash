@@ -13,24 +13,27 @@ class CommandController extends Controller
 {
     public function pending(Request $request): JsonResponse
     {
+        // 1. Define the ID from the header first
         $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
         
+        // 2. Try Sanctum first, then fallback to manual lookup
         $rover = $request->user();
 
-        // 1. Safe Lookup: Only search the integer 'id' if the value is a number
         if (!$rover && $roverId) {
             $rover = \App\Models\Rover::where(function($query) use ($roverId) {
                 if (is_numeric($roverId)) {
-                    $query->where('id', $roverId);
+                    $query->where('id', (int)$roverId);
                 }
-                $query->orWhere('rover_id', $roverId); // Search string column
+                // We use 'name' here because your DB shows "rover-01" is in the name column
+                $query->orWhere('name', $roverId); 
             })->first();
         }
 
         if (!$rover) {
-            return response()->json(['message' => 'Rover not found. Is rover_id correct in DB?'], 404);
+            return response()->json(['message' => 'Rover not found. Is rover_id correct?'], 404);
         }
 
+        // 3. Process commands
         $commands = $rover->pendingCommands()->oldest()->get();
 
         $commands->each(function (Command $command) {
@@ -55,13 +58,12 @@ class CommandController extends Controller
         
         $rover = $request->user();
 
-        // Safe Lookup for Complete method too
         if (!$rover && $roverId) {
             $rover = \App\Models\Rover::where(function($query) use ($roverId) {
                 if (is_numeric($roverId)) {
-                    $query->where('id', $roverId);
+                    $query->where('id', (int)$roverId);
                 }
-                $query->orWhere('rover_id', $roverId);
+                $query->orWhere('name', $roverId);
             })->first();
         }
 
@@ -69,6 +71,7 @@ class CommandController extends Controller
             return response()->json(['message' => 'Rover not found'], 404);
         }
 
+        // Security check: Match the command to this specific rover
         if ($command->rover_id !== $rover->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
