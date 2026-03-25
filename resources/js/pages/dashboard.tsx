@@ -513,6 +513,14 @@ export default function Dashboard({
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
+                                    {/* ADDED: Full-width Test Connection Button */}
+                                    <button
+                                        onClick={() => sendQuickCommand('ping', { message: 'Hello from Dashboard!' })}
+                                        className="col-span-2 flex h-11 items-center justify-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-400"
+                                    >
+                                        <Radio className="size-4" />
+                                        Ping Rover (Test Connection)
+                                    </button>
                                     <button
                                         onClick={() => sendQuickCommand('stop')}
                                         className="flex h-11 items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/8 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/15 dark:text-red-400"
