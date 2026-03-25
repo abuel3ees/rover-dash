@@ -12,49 +12,58 @@ use Illuminate\Http\Request;
 class CommandController extends Controller
 {
     public function pending(Request $request): JsonResponse
-{
-    // 1. Find the rover by the ID passed in the request URL/headers
-    $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
-    
-    $rover = \App\Models\Rover::where('id', $roverId)
-               ->orWhere('rover_id', $roverId) // Depending on your DB column name
-               ->first();
+    {
+        // Find the rover by Sanctum OR the custom Header
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        
+        $rover = $request->user() ?? \App\Models\Rover::where('id', $roverId)
+                   ->orWhere('rover_id', $roverId) 
+                   ->first();
 
-    if (!$rover) {
-        return response()->json(['message' => 'Rover not found'], 404);
-    }
+        if (!$rover) {
+            return response()->json(['message' => 'Rover not found'], 404);
+        }
 
-    // 2. The rest of your code stays exactly the same
-    $commands = $rover->pendingCommands()
-        ->oldest()
-        ->get();
+        $commands = $rover->pendingCommands()
+            ->oldest()
+            ->get();
 
-    $commands->each(function (Command $command) {
-        $command->update([
-            'status' => 'sent',
-            'sent_at' => now(),
+        $commands->each(function (Command $command) {
+            $command->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+        });
+
+        return response()->json([
+            'commands' => $commands->map(fn (Command $cmd) => [
+                'id' => $cmd->id,
+                'type' => $cmd->type,
+                'payload' => $cmd->payload,
+            ]),
         ]);
-    });
-
-    return response()->json([
-        'commands' => $commands->map(fn (Command $cmd) => [
-            'id' => $cmd->id,
-            'type' => $cmd->type,
-            'payload' => $cmd->payload,
-        ]),
-    ]);
-}
+    }
 
     public function complete(CompleteCommandRequest $request, Command $command): JsonResponse
     {
-        $rover = $request->user();
+        // Apply the same fallback logic here so we don't crash when completing!
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        
+        $rover = $request->user() ?? \App\Models\Rover::where('id', $roverId)
+                   ->orWhere('rover_id', $roverId)
+                   ->first();
 
+        if (!$rover) {
+            return response()->json(['message' => 'Rover not found'], 404);
+        }
+
+        // Security check: Make sure this rover actually owns this command
         if ($command->rover_id !== $rover->id) {
-            abort(403);
+            return response()->json(['message' => 'Forbidden'], 403);
         }
 
         $command->update([
-            'status' => $request->validated('status'),
+            'status' => $request->validated('status') ?? 'completed', // Fallback just in case
             'executed_at' => now(),
             'response' => $request->validated('response'),
         ]);
