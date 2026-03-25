@@ -12,29 +12,38 @@ use Illuminate\Http\Request;
 class CommandController extends Controller
 {
     public function pending(Request $request): JsonResponse
-    {
-        $rover = $request->user();
+{
+    // 1. Find the rover by the ID passed in the request URL/headers
+    $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+    
+    $rover = \App\Models\Rover::where('id', $roverId)
+               ->orWhere('rover_id', $roverId) // Depending on your DB column name
+               ->first();
 
-        $commands = $rover->pendingCommands()
-            ->oldest()
-            ->get();
-
-        // Mark retrieved commands as sent
-        $commands->each(function (Command $command) {
-            $command->update([
-                'status' => 'sent',
-                'sent_at' => now(),
-            ]);
-        });
-
-        return response()->json([
-            'commands' => $commands->map(fn (Command $cmd) => [
-                'id' => $cmd->id,
-                'type' => $cmd->type,
-                'payload' => $cmd->payload,
-            ]),
-        ]);
+    if (!$rover) {
+        return response()->json(['message' => 'Rover not found'], 404);
     }
+
+    // 2. The rest of your code stays exactly the same
+    $commands = $rover->pendingCommands()
+        ->oldest()
+        ->get();
+
+    $commands->each(function (Command $command) {
+        $command->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+    });
+
+    return response()->json([
+        'commands' => $commands->map(fn (Command $cmd) => [
+            'id' => $cmd->id,
+            'type' => $cmd->type,
+            'payload' => $cmd->payload,
+        ]),
+    ]);
+}
 
     public function complete(CompleteCommandRequest $request, Command $command): JsonResponse
     {
