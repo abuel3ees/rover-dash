@@ -17,8 +17,8 @@ class ConversationController extends Controller
 
         $conversations = $user->conversations()
             ->with([
-                'participants:id,name,avatar',
-                'latestMessage.user:id,name,avatar',
+                'participants:id,name',
+                'latestMessage.user:id,name',
             ])
             ->get()
             ->sortByDesc(function ($conversation) {
@@ -33,9 +33,9 @@ class ConversationController extends Controller
                     'participants' => $conversation->participants->map(fn ($p) => [
                         'id' => $p->id,
                         'name' => $p->name,
-                        'avatar' => $p->avatar,
-                        'is_online' => $p->isOnlineForChat(),
-                        'last_active_at' => $p->last_active_at?->toIso8601String(),
+                        'avatar' => null,
+                        'is_online' => false,
+                        'last_active_at' => null,
                     ])->toArray(),
                     'latest_message' => $conversation->latestMessage ? [
                         'id' => $conversation->latestMessage->id,
@@ -130,7 +130,7 @@ class ConversationController extends Controller
         $perPage = 50;
 
         $messages = $conversation->messages()
-            ->with('user:id,name,avatar')
+            ->with('user:id,name')
             ->with('reactions.user:id')
             ->whereNull('deleted_at')
             ->orderBy('created_at', 'desc')

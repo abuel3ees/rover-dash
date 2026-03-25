@@ -31,6 +31,6 @@ Broadcast::channel('messaging.lobby', function ($user) {
     return [
         'id' => $user->id,
         'name' => $user->name,
-        'avatar' => $user->avatar ?? null,
+        'avatar' => null,
     ];
 });

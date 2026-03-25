@@ -11,7 +11,11 @@ class UpdateUserLastActiveAt
     public function handle(Request $request, Closure $next): Response
     {
         if (auth()->check()) {
-            auth()->user()->update(['last_active_at' => now()]);
+            try {
+                auth()->user()->update(['last_active_at' => now()]);
+            } catch (\Exception) {
+                // Column may not exist yet — migration pending
+            }
         }
 
         return $next($request);

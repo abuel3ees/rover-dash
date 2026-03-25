@@ -33,7 +33,7 @@ class MessageController extends Controller
             'body' => $validated['body'],
         ]);
 
-        $message->load('user:id,name,avatar');
+        $message->load('user:id,name');
 
         // Broadcast the message (except for broadcast type which remains ephemeral)
         if ($conversation->type !== 'broadcast') {

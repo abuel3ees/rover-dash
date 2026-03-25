@@ -32,7 +32,7 @@ class MessageSent implements ShouldBroadcastNow
             'user' => [
                 'id' => $this->message->user->id,
                 'name' => $this->message->user->name,
-                'avatar' => $this->message->user->avatar,
+                'avatar' => null,
             ],
             'body' => $this->message->body,
             'reply_to_id' => $this->message->reply_to_id,

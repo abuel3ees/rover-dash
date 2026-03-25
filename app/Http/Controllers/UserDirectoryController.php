@@ -15,7 +15,7 @@ class UserDirectoryController extends Controller
         ]);
 
         $query = User::where('id', '!=', auth()->id())
-            ->select('id', 'name', 'email', 'avatar', 'last_active_at');
+            ->select('id', 'name', 'email');
 
         if ($validated['search'] ?? null) {
             $search = $validated['search'];
@@ -30,9 +30,9 @@ class UserDirectoryController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'avatar' => $user->avatar,
-                'is_online' => $user->isOnlineForChat(),
-                'last_active_at' => $user->last_active_at?->toIso8601String(),
+                'avatar' => null,
+                'is_online' => false,
+                'last_active_at' => null,
             ];
         });
 

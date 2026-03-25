@@ -23,7 +23,7 @@ class MessageSearchController extends Controller
         $results = $conversation->messages()
             ->where('body', 'like', '%' . $validated['q'] . '%')
             ->whereNull('deleted_at')
-            ->with('user:id,name,avatar')
+            ->with('user:id,name')
             ->with('reactions.user')
             ->orderBy('created_at', 'desc')
             ->limit(50)
