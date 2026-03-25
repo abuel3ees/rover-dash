@@ -7,27 +7,22 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Rover heartbeat & status
+    
+    // 1. Rover Heartbeat & Status
+    // (I removed the duplicate closure and kept your dedicated controller)
     Route::post('rover/heartbeat', [RoverStatusController::class, 'heartbeat']);
     Route::post('rover/status', [RoverStatusController::class, 'update']);
 
-    // Telemetry
+    // 2. Telemetry
     Route::post('telemetry', [TelemetryController::class, 'store']);
     Route::post('telemetry/batch', [TelemetryController::class, 'storeBatch']);
 
-    // Commands (Pi polls for pending commands)
-Route::patch('commands/{command}/complete', [CommandController::class, 'complete']);
+    // 3. Commands (The routes the Pi was looking for!)
+    // The GET route for the Pi to fetch pending commands
+    Route::get('rover/commands/pending', [CommandController::class, 'pending']);
+    
+    // The POST route for the Pi to mark a command as complete
+    // (Changed from patch to post to match the Python script's requests.post)
+    Route::post('rover/commands/{command}/complete', [CommandController::class, 'complete']);
 
-Route::post('/rover/heartbeat', function (Request $request) {
-Route::post('/rover/heartbeat', function (Request $request) {
-    // For now, let's just log it to see if it works
-    \Log::info('Rover Heartbeat Received:', $request->all());
-
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Heartbeat received at ' . now(),
-        'commands' => [] // We will put movement commands here later
-    ]);
-});
-});
 });
