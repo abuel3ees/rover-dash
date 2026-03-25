@@ -13,20 +13,25 @@ class CommandController extends Controller
 {
     public function pending(Request $request): JsonResponse
     {
-        // Find the rover by Sanctum OR the custom Header
         $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
         
-        $rover = $request->user() ?? \App\Models\Rover::where('id', $roverId)
-                   ->orWhere('rover_id', $roverId) 
-                   ->first();
+        $rover = $request->user();
 
-        if (!$rover) {
-            return response()->json(['message' => 'Rover not found'], 404);
+        // 1. Safe Lookup: Only search the integer 'id' if the value is a number
+        if (!$rover && $roverId) {
+            $rover = \App\Models\Rover::where(function($query) use ($roverId) {
+                if (is_numeric($roverId)) {
+                    $query->where('id', $roverId);
+                }
+                $query->orWhere('rover_id', $roverId); // Search string column
+            })->first();
         }
 
-        $commands = $rover->pendingCommands()
-            ->oldest()
-            ->get();
+        if (!$rover) {
+            return response()->json(['message' => 'Rover not found. Is rover_id correct in DB?'], 404);
+        }
+
+        $commands = $rover->pendingCommands()->oldest()->get();
 
         $commands->each(function (Command $command) {
             $command->update([
@@ -46,24 +51,30 @@ class CommandController extends Controller
 
     public function complete(CompleteCommandRequest $request, Command $command): JsonResponse
     {
-        // Apply the same fallback logic here so we don't crash when completing!
         $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
         
-        $rover = $request->user() ?? \App\Models\Rover::where('id', $roverId)
-                   ->orWhere('rover_id', $roverId)
-                   ->first();
+        $rover = $request->user();
+
+        // Safe Lookup for Complete method too
+        if (!$rover && $roverId) {
+            $rover = \App\Models\Rover::where(function($query) use ($roverId) {
+                if (is_numeric($roverId)) {
+                    $query->where('id', $roverId);
+                }
+                $query->orWhere('rover_id', $roverId);
+            })->first();
+        }
 
         if (!$rover) {
             return response()->json(['message' => 'Rover not found'], 404);
         }
 
-        // Security check: Make sure this rover actually owns this command
         if ($command->rover_id !== $rover->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
         $command->update([
-            'status' => $request->validated('status') ?? 'completed', // Fallback just in case
+            'status' => $request->validated('status') ?? 'completed',
             'executed_at' => now(),
             'response' => $request->validated('response'),
         ]);
