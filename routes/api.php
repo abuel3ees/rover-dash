@@ -6,10 +6,6 @@ use App\Http\Controllers\Api\TelemetryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('auth:sanctum')->group(function () {
-    
-    // 1. Rover Heartbeat & Status
-    // (I removed the duplicate closure and kept your dedicated controller)
     Route::post('rover/heartbeat', [RoverStatusController::class, 'heartbeat']);
     Route::post('rover/status', [RoverStatusController::class, 'update']);
 
@@ -24,5 +20,3 @@ Route::middleware('auth:sanctum')->group(function () {
     // The POST route for the Pi to mark a command as complete
     // (Changed from patch to post to match the Python script's requests.post)
     Route::post('rover/commands/{command}/complete', [CommandController::class, 'complete']);
-
-});
