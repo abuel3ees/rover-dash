@@ -363,9 +363,35 @@ def send_heartbeat() -> bool:
         return False
 
 
+def update_stream_url(stream_url: str) -> bool:
+    """Update the rover's camera stream URL on the dashboard"""
+    try:
+        headers = {
+            "Authorization": f"Bearer {API_TOKEN}",
+            "X-Rover-Id": ROVER_ID,
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "stream_url": stream_url
+        }
+        
+        url = f"{DASHBOARD_URL}/api/rover/settings"
+        response = requests.patch(url, json=payload, headers=headers, timeout=5)
+        
+        if response.status_code in [200, 201]:
+            log(f"✓ Updated rover stream URL: {stream_url}")
+            return True
+        else:
+            log(f"⚠️  Failed to update stream URL: {response.status_code}", 'WARN')
+            return False
+    except Exception as e:
+        log(f"Error updating stream URL: {e}", 'WARN')
+        return False
+
+
 def collect_and_send_telemetry():
     """Collect all telemetry and send to dashboard"""
-    send_heartbeat()
     send_telemetry('temperature', get_temperature_data())
     send_telemetry('battery', get_battery_data())
     send_telemetry('accelerometer', get_accelerometer_data())
@@ -379,9 +405,16 @@ def rover_client_thread():
     log(f"Telemetry: sending every {TELEMETRY_INTERVAL}s")
     
     last_telemetry_time = time.time()
+    last_heartbeat_time = time.time()
     
     while not stop_event.is_set():
         try:
+            # Send heartbeat every 10 seconds (more frequent than telemetry)
+            current_time = time.time()
+            if current_time - last_heartbeat_time >= 10:
+                send_heartbeat()
+                last_heartbeat_time = current_time
+            
             # Check for commands
             commands = fetch_pending_commands()
             for cmd in commands:
@@ -469,6 +502,32 @@ def get_ngrok_url():
     except:
         pass
     return None
+
+
+def open_camera_in_browser(url: str):
+    """Open camera stream URL in default browser"""
+    try:
+        import subprocess
+        # Try chromium first, then fallback to other browsers
+        for browser in ['chromium', 'chromium-browser', 'google-chrome', 'firefox']:
+            try:
+                subprocess.Popen([browser, f"{url}/video_feed"])
+                log(f"✓ Opened camera stream in {browser}")
+                return True
+            except (FileNotFoundError, OSError):
+                continue
+        
+        # Fallback to xdg-open on Linux
+        try:
+            subprocess.Popen(['xdg-open', f"{url}/video_feed"])
+            log(f"✓ Opened camera stream in default browser")
+            return True
+        except:
+            log(f"⚠️  Could not open browser automatically", 'WARN')
+            return False
+    except Exception as e:
+        log(f"Error opening browser: {e}", 'WARN')
+        return False
 
 
 def monitor_processes():
@@ -570,14 +629,24 @@ def main():
     log("Press Ctrl+C to stop all services")
     log("")
     
-    # Check ngrok URL
+    # Check ngrok URL and send to dashboard
     time.sleep(4)
     ngrok_url = get_ngrok_url()
     if ngrok_url:
         log(f"🎉 ngrok tunnel URL: {ngrok_url}")
         log(f"   Camera stream: {ngrok_url}/video_feed")
-        log(f"   Update dashboard settings with this URL")
+        
+        # Send stream URL to dashboard
+        stream_url = f"{ngrok_url}/video_feed"
+        if update_stream_url(stream_url):
+            log(f"✓ Dashboard updated with stream URL")
+        else:
+            log(f"⚠️  Could not update dashboard with stream URL", 'WARN')
+        
         log("")
+        
+        # Open in browser
+        open_camera_in_browser(ngrok_url)
     
     # Monitor processes
     try:

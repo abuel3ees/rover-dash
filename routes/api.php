@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\Api\CommandController;
 use App\Http\Controllers\Api\RoverStatusController;
+use App\Http\Controllers\Api\RoverSettingsController;
 use App\Http\Controllers\Api\TelemetryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
     Route::post('rover/heartbeat', [RoverStatusController::class, 'heartbeat']);
     Route::post('rover/status', [RoverStatusController::class, 'update']);
+    Route::patch('rover/settings', [RoverSettingsController::class, 'update']);
 
     // 2. Telemetry
     Route::post('telemetry', [TelemetryController::class, 'store']);

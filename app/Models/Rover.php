@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'description', 'status', 'stream_url', 'ip_address', 'stream_port', 'hardware_info'])]
+#[Fillable(['name', 'description', 'status', 'stream_url', 'ip_address', 'stream_port', 'hardware_info', 'last_seen_at'])]
 class Rover extends Model
 {
     use HasApiTokens, HasFactory;
