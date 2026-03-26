@@ -41,8 +41,14 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
                 <html>
                 <head>
                     <style>
-                        body { margin: 0; padding: 0; background: #000; }
-                        img { display: block; width: 100%; height: 100%; object-fit: cover; }
+                        body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+                        img { 
+                            display: block; 
+                            width: 100%; 
+                            height: 100%; 
+                            object-fit: contain;
+                            background: #000;
+                        }
                     </style>
                 </head>
                 <body>
