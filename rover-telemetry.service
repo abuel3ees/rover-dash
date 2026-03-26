@@ -1,0 +1,18 @@
+[Unit]
+Description=Rover Telemetry Client - Send system data to dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hamzamira
+WorkingDirectory=/home/hamzamira/rover/rover-pi-client
+ExecStart=/usr/bin/python3 /home/hamzamira/rover/rover-pi-client/pi-telemetry-client.py
+Restart=on-failure
+RestartSec=60
+StandardOutput=append:/home/hamzamira/rover/rover-pi-client/telemetry.log
+StandardError=append:/home/hamzamira/rover/rover-pi-client/telemetry.log
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+[Install]
+WantedBy=multi-user.target
