@@ -1,50 +1,96 @@
 #!/usr/bin/env python3
 """
-Camera Server - Streams video from Raspberry Pi Camera to ngrok
+Camera Server - Streams video from Raspberry Pi Camera to Twitch Live
 Place this in /home/hamzamira/rover/rover-pi-client/camera_server.py
 Run with: python3 camera_server.py
 
-Or let pi-master-start.py manage it automatically
+This streams directly to Twitch Live, then you embed the stream in the dashboard
 """
 
 import cv2
-from flask import Flask, Response
-from flask_cors import CORS
+import subprocess
+import os
+from flask import Flask, jsonify
 from picamera2 import Picamera2
 import logging
+import threading
 
 # Suppress Flask werkzeug logs
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
 app = Flask(__name__)
 
-# Enable CORS for all routes
-CORS(app, resources={
-    r"/video_feed": {
-        "origins": "*",
-        "methods": ["GET", "OPTIONS"],
-        "allow_headers": ["Content-Type", "ngrok-skip-browser-warning"]
-    }
-})
+# Configuration
+TWITCH_STREAM_KEY = os.getenv('TWITCH_STREAM_KEY', '')
+TWITCH_RTMP_URL = 'rtmps://live-fra.twitch.tv/app'
 
 # Initialize camera
 try:
     picam2 = Picamera2()
     config = picam2.create_preview_configuration(
-        main={"size": (640, 480), "format": "BGR888"}
+        main={"size": (1280, 720), "format": "BGR888"}
     )
     picam2.configure(config)
     picam2.start()
-    print("✓ Camera initialized successfully (640x480)")
+    print("✓ Camera initialized successfully (1280x720)")
 except Exception as e:
     print(f"✗ Failed to initialize camera: {e}")
     picam2 = None
 
+# FFmpeg streaming process
+ffmpeg_process = None
 
-def generate_frames():
-    """Generate MJPEG frames from camera"""
+
+def start_youtube_stream():
+    """Start streaming to Twitch Live via FFmpeg"""
+    global ffmpeg_process
+    
+    if not TWITCH_STREAM_KEY:
+        print("⚠️  TWITCH_STREAM_KEY not set in environment")
+        return False
+    
+    try:
+        # FFmpeg command to stream video from camera to Twitch
+        cmd = [
+            'ffmpeg',
+            '-f', 'rawvideo',
+            '-pix_fmt', 'bgr24',
+            '-s', '1280x720',
+            '-r', '30',
+            '-i', 'pipe:0',
+            '-c:v', 'libx264',
+            '-preset', 'veryfast',
+            '-b:v', '2500k',
+            '-maxrate', '2500k',
+            '-bufsize', '5000k',
+            '-f', 'flv',
+            f'{TWITCH_RTMP_URL}/{TWITCH_STREAM_KEY}'
+        ]
+        
+        ffmpeg_process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=10 ** 8
+        )
+        print(f"✓ FFmpeg process started (PID: {ffmpeg_process.pid})")
+        print(f"✓ Streaming to Twitch...")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to start FFmpeg: {e}")
+        return False
+
+
+def stream_to_youtube():
+    """Continuously stream frames to Twitch via FFmpeg"""
+    global ffmpeg_process
+    
+    if not ffmpeg_process:
+        return
+    
     frame_count = 0
-    while True:
+    while ffmpeg_process and ffmpeg_process.poll() is None:
         try:
             if picam2:
                 frame = picam2.capture_array()
@@ -52,64 +98,82 @@ def generate_frames():
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             else:
                 # Fallback: create a dummy frame if camera unavailable
-                frame = cv2.zeros((480, 640, 3), dtype='uint8')
-                cv2.putText(frame, "Camera Not Available", (150, 240),
+                frame = cv2.zeros((720, 1280, 3), dtype='uint8')
+                cv2.putText(frame, "Camera Not Available", (450, 360),
                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
-            # Compress frame to JPEG with higher quality for better image
-            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
-            if not ret:
-                continue
-                
-            frame_bytes = buffer.tobytes()
-            
-            # Yield frame in MJPEG format
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n'
-                   b'Content-Length: ' + str(len(frame_bytes)).encode() + b'\r\n'
-                   b'\r\n' + frame_bytes + b'\r\n')
+            # Write frame to FFmpeg stdin
+            ffmpeg_process.stdin.write(frame.tobytes())
+            ffmpeg_process.stdin.flush()
             
             frame_count += 1
             if frame_count % 30 == 0:
-                print(f"Streamed {frame_count} frames")
+                print(f"Streamed {frame_count} frames to YouTube")
         except Exception as e:
-            print(f"Error generating frame: {e}")
-            continue
-
-
-@app.route('/video_feed')
-def video_feed():
-    """Stream video feed"""
-    response = Response(generate_frames(),
-                        mimetype='multipart/x-mixed-replace; boundary=frame')
-    response.headers['ngrok-skip-browser-warning'] = 'true'
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, ngrok-skip-browser-warning'
-    return response
+            print(f"Error streaming frame: {e}")
+            break
+    
+    if ffmpeg_process:
+        ffmpeg_process.stdin.close()
+        ffmpeg_process.wait()
 
 
 @app.route('/health')
 def health():
     """Health check endpoint"""
-    return {'status': 'ok', 'service': 'camera-server'}, 200
+    return jsonify({
+        'status': 'ok',
+        'service': 'camera-server',
+        'streaming_to_youtube': ffmpeg_process is not None and ffmpeg_process.poll() is None
+    }), 200
+
+
+@app.route('/youtube-status')
+def youtube_status():
+    """Get Twitch streaming status"""
+    is_streaming = ffmpeg_process is not None and ffmpeg_process.poll() is None
+    return jsonify({
+        'streaming': is_streaming,
+        'has_stream_key': bool(TWITCH_STREAM_KEY),
+        'platform': 'Twitch',
+        'message': 'Streaming to Twitch Live' if is_streaming else 'Not streaming'
+    }), 200
 
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("  Camera Server Starting")
+    print("  Camera Server - Twitch Live Streaming")
     print("=" * 70)
     print("")
-    print("Video stream available at: http://0.0.0.0:5000/video_feed")
-    print("Health check at:           http://0.0.0.0:5000/health")
+    print("Setup Instructions:")
+    print("1. Go to https://www.twitch.tv/settings/channel")
+    print("2. Scroll to 'Stream Key' and click 'Show'")
+    print("3. Copy your Stream Key")
+    print("4. Set environment variable: export TWITCH_STREAM_KEY='your_key_here'")
+    print("5. Run this script")
+    print("")
+    print("Stream will be UNLISTED (not in directory, only via direct link)")
+    print("")
+    print("Health check at: http://0.0.0.0:5000/health")
+    print("Twitch status: http://0.0.0.0:5000/youtube-status")
     print("")
     print("Press Ctrl+C to stop")
     print("")
+    
+    # Start Twitch streaming in background thread
+    if start_youtube_stream():
+        stream_thread = threading.Thread(target=stream_to_youtube, daemon=True)
+        stream_thread.start()
+        print("✓ Streaming thread started")
     
     try:
         app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
     except KeyboardInterrupt:
         print("\nShutting down camera server...")
+        if ffmpeg_process:
+            ffmpeg_process.stdin.close()
+            ffmpeg_process.wait()
         if picam2:
             picam2.stop()
         print("Camera server stopped")
+

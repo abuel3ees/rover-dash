@@ -1,6 +1,4 @@
-import { RefreshCw, VideoOff } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { VideoOff } from 'lucide-react';
 
 interface CameraFeedProps {
     isOnline: boolean;
@@ -8,94 +6,70 @@ interface CameraFeedProps {
 }
 
 export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
-    const imgRef = useRef<HTMLImageElement>(null);
-    const [hasError, setHasError] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string>('');
-
-    // Use dashboard proxy for MJPEG streams
-    const canTryStream = streamUrl ? true : isOnline;
-
-    useEffect(() => {
-        if (!canTryStream || hasError) {
-            return;
+    // Extract Twitch channel name from various URL formats
+    const getTwitchChannelName = (url?: string | null): string | null => {
+        if (!url) {
+            return null;
         }
 
-        const img = imgRef.current;
-        if (!img) return;
+        try {
+            // Handle twitch.tv/channelname
+            const urlObj = new URL(url);
 
-        let isMounted = true;
-        const controller = new AbortController();
-
-        function loadFrame() {
-            if (!isMounted || !img) return;
-            
-            img.src = `/rover/stream?t=${Date.now()}`;
-        }
-
-        // Load first frame
-        loadFrame();
-
-        // Reload frame every 100ms for smooth streaming (10 FPS)
-        const interval = setInterval(() => {
-            if (isMounted) {
-                loadFrame();
+            if (urlObj.hostname.includes('twitch.tv')) {
+                return urlObj.pathname.slice(1); // Remove leading /
             }
-        }, 100);
 
-        img.onerror = () => {
-            setErrorMessage('Failed to load stream frame');
-            setHasError(true);
-        };
+            // Handle just the channel name
+            if (url && !url.includes('/') && !url.includes('.')) {
+                return url;
+            }
+        } catch {
+            return null;
+        }
 
-        return () => {
-            isMounted = false;
-            clearInterval(interval);
-            controller.abort();
-        };
-    }, [canTryStream, hasError]);
+        return null;
+    };
 
-    function reconnect() {
-        setHasError(false);
-        setErrorMessage('');
-    }
+    const twitchChannel = getTwitchChannelName(streamUrl);
 
-    if (!canTryStream || hasError) {
+    if (!isOnline || !twitchChannel) {
         return (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-lg border border-border/40 bg-muted/20 p-4">
                 <VideoOff className="size-8 text-muted-foreground/30" />
                 <div className="flex flex-col items-center gap-2 max-w-xs">
                     <p className="text-xs text-muted-foreground/50 tracking-wide text-center">
-                        {hasError 
-                            ? errorMessage || 'Stream unavailable - check camera server and network connection' 
-                            : 'Rover offline'}
+                        {!isOnline
+                            ? 'Rover offline'
+                            : !twitchChannel
+                            ? 'No Twitch stream configured. Set stream URL in rover settings'
+                            : 'Stream unavailable'}
                     </p>
                 </div>
-                {hasError && (
-                    <Button variant="outline" size="sm" className="h-7 rounded-lg text-xs" onClick={reconnect}>
-                        <RefreshCw className="mr-1.5 size-3" />
-                        Reconnect
-                    </Button>
-                )}
             </div>
         );
     }
 
     return (
-        <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black flex items-center justify-center">
-            <img
-                ref={imgRef}
-                alt="Camera feed"
-                className="max-w-full max-h-full object-contain"
+        <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black">
+            {/* Twitch Embedded Player */}
+            <iframe
+                className="w-full h-full"
+                src={`https://player.twitch.tv/?channel=${twitchChannel}&parent=${window.location.hostname}&autoplay=true&muted=true`}
+                title="Rover Camera Feed"
+                allowFullScreen
+                frameBorder="0"
+                scrolling="no"
             />
-            {!hasError && (
-                <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-white backdrop-blur-sm">
-                    <span className="relative flex size-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                        <span className="relative inline-flex size-1.5 rounded-full bg-white" />
-                    </span>
-                    Live
-                </div>
-            )}
+
+            {/* Live Indicator */}
+            <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-white backdrop-blur-sm z-10">
+                <span className="relative flex size-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex size-1.5 rounded-full bg-white" />
+                </span>
+                Live
+            </div>
         </div>
     );
 }
