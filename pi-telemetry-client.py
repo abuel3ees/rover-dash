@@ -20,15 +20,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-# Configuration
+# Configuration - Load from .env or environment
 DASHBOARD_URL = os.getenv('DASHBOARD_URL', 'http://localhost')
-ROVER_TOKEN = os.getenv('ROVER_TOKEN', '')  # Set this in .env or environment
-ROVER_ID = os.getenv('ROVER_ID', '')  # Optional, if not using token auth
+# Support both ROVER_TOKEN and API_TOKEN for compatibility
+ROVER_TOKEN = os.getenv('ROVER_TOKEN', os.getenv('API_TOKEN', ''))
+ROVER_ID = os.getenv('ROVER_ID', '')
 
 # Paths
 CONFIG_DIR = Path.home() / 'rover' / 'rover-pi-client'
 CONFIG_FILE = CONFIG_DIR / 'config.json'
 LOG_FILE = CONFIG_DIR / 'telemetry.log'
+ENV_FILE = CONFIG_DIR / '.env'
 
 
 class TelemetryClient:
@@ -36,11 +38,37 @@ class TelemetryClient:
         self.dashboard_url = DASHBOARD_URL
         self.rover_token = ROVER_TOKEN
         self.rover_id = ROVER_ID
+        # Try loading from .env file in the same directory
+        self.load_env_file()
         self.session = requests.Session()
         self.load_config()
 
+    def load_env_file(self):
+        """Load configuration from .env file in rover-pi-client directory"""
+        if ENV_FILE.exists():
+            try:
+                with open(ENV_FILE, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#') and '=' in line:
+                            key, value = line.split('=', 1)
+                            key = key.strip()
+                            value = value.strip()
+                            
+                            if key == 'DASHBOARD_URL':
+                                self.dashboard_url = value
+                            elif key in ['ROVER_TOKEN', 'API_TOKEN']:
+                                self.rover_token = value
+                            elif key == 'ROVER_ID':
+                                self.rover_id = value
+                    
+                    if self.rover_token:
+                        self.log(f"✓ Configuration loaded from {ENV_FILE}")
+            except Exception as e:
+                self.log(f"Warning: Error loading .env file: {e}")
+
     def load_config(self):
-        """Load configuration from config.json"""
+        """Load configuration from config.json (overrides .env if present)"""
         if CONFIG_FILE.exists():
             try:
                 with open(CONFIG_FILE, 'r') as f:
@@ -48,9 +76,9 @@ class TelemetryClient:
                     self.dashboard_url = config.get('dashboard_url', self.dashboard_url)
                     self.rover_token = config.get('rover_token', self.rover_token)
                     self.rover_id = config.get('rover_id', self.rover_id)
-                    self.log(f"Configuration loaded from {CONFIG_FILE}")
+                    self.log(f"Configuration also loaded from {CONFIG_FILE}")
             except Exception as e:
-                self.log(f"Error loading config: {e}")
+                self.log(f"Error loading config.json: {e}")
 
     def log(self, message: str):
         """Log message to file and stdout"""
