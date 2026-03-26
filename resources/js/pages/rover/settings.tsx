@@ -4,6 +4,7 @@ import { Copy, Eye, EyeOff, Key, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import { StreamHealthCheck } from '@/components/rover/stream-health-check';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -167,6 +168,8 @@ export default function RoverSettings({
                                 </p>
                                 <InputError message={errors.stream_url} />
                             </div>
+
+                            <StreamHealthCheck />
 
                             <div className="flex items-center gap-4">
                                 <Button disabled={processing}>Save</Button>

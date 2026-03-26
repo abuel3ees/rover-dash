@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Camera stream proxy
     Route::get('rover/stream', [StreamController::class, 'proxy'])->name('rover.stream');
+    Route::get('rover/stream/health', [StreamController::class, 'health'])->name('rover.stream.health');
 
     // Chat (legacy ephemeral channels)
     Route::get('chat', [ChatController::class, 'index'])->name('chat');

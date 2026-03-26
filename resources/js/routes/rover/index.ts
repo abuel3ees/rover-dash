@@ -1,5 +1,6 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 import token from './token'
+import stream9fa923 from './stream'
 /**
 * @see \App\Http\Controllers\RoverController::create
 * @see app/Http/Controllers/RoverController.php:15
@@ -352,7 +353,7 @@ destroy.form = destroyForm
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 export const stream = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -367,7 +368,7 @@ stream.definition = {
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 stream.url = (options?: RouteQueryOptions) => {
@@ -376,7 +377,7 @@ stream.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 stream.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -386,7 +387,7 @@ stream.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 stream.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -396,7 +397,7 @@ stream.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 const streamForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -406,7 +407,7 @@ const streamForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => 
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 streamForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -416,7 +417,7 @@ streamForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:13
+* @see app/Http/Controllers/StreamController.php:58
 * @route '/rover/stream'
 */
 streamForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -438,7 +439,7 @@ const rover = {
     update: Object.assign(update, update),
     destroy: Object.assign(destroy, destroy),
     token: Object.assign(token, token),
-    stream: Object.assign(stream, stream),
+    stream: Object.assign(stream, stream9fa923),
 }
 
 export default rover

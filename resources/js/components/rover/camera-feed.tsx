@@ -13,6 +13,7 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
     const [loading, setLoading] = useState(true);
     const [key, setKey] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [debugInfo, setDebugInfo] = useState<string>('');
 
     const src = streamUrl ?? '/rover/stream';
     const canTryStream = streamUrl ? true : isOnline;
@@ -105,6 +106,7 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
 
                 const errorMsg = e instanceof Error ? e.message : 'Unknown error';
                 setErrorMessage(errorMsg);
+                setDebugInfo(`Check: 1) Pi camera server running 2) Stream URL correct 3) Network accessible. Error: ${errorMsg}`);
                 setHasError(true);
                 setLoading(false);
             }
@@ -125,11 +127,18 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
         return (
             <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-lg border border-border/40 bg-muted/20 p-4">
                 <VideoOff className="size-8 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground/50 tracking-wide text-center max-w-xs">
-                    {hasError 
-                        ? errorMessage || 'Stream unavailable - check camera server and network connection' 
-                        : 'Rover offline'}
-                </p>
+                <div className="flex flex-col items-center gap-2 max-w-xs">
+                    <p className="text-xs text-muted-foreground/50 tracking-wide text-center">
+                        {hasError 
+                            ? errorMessage || 'Stream unavailable - check camera server and network connection' 
+                            : 'Rover offline'}
+                    </p>
+                    {debugInfo && (
+                        <p className="text-[10px] text-muted-foreground/40 text-center font-mono bg-background/50 p-2 rounded max-h-16 overflow-y-auto w-full">
+                            {debugInfo}
+                        </p>
+                    )}
+                </div>
                 {hasError && (
                     <Button variant="outline" size="sm" className="h-7 rounded-lg text-xs" onClick={reconnect}>
                         <RefreshCw className="mr-1.5 size-3" />

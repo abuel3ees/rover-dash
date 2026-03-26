@@ -4,12 +4,57 @@ namespace App\Http\Controllers;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController extends Controller
 {
+    public function health(Request $request): JsonResponse
+    {
+        $rover = $request->user()->rover;
+
+        if (!$rover) {
+            return response()->json(['status' => 'error', 'message' => 'No rover configured'], 404);
+        }
+
+        if (!$rover->stream_url) {
+            return response()->json(['status' => 'error', 'message' => 'No stream URL configured'], 400);
+        }
+
+        $streamUrl = $rover->stream_url;
+        $client = new Client(['verify' => false]);
+
+        try {
+            $response = $client->head($streamUrl, [
+                'headers' => [
+                    'ngrok-skip-browser-warning' => 'true',
+                ],
+                'connect_timeout' => 5,
+                'timeout' => 5,
+            ]);
+
+            return response()->json([
+                'status' => 'ok',
+                'url' => $streamUrl,
+                'http_status' => $response->getStatusCode(),
+                'content_type' => $response->getHeaderLine('Content-Type'),
+            ]);
+        } catch (GuzzleException $e) {
+            Log::warning('Stream health check failed', [
+                'url' => $streamUrl,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'url' => $streamUrl,
+                'message' => $e->getMessage(),
+            ], 502);
+        }
+    }
+
     public function proxy(Request $request): StreamedResponse
     {
         $rover = $request->user()->rover;
