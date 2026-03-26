@@ -12,7 +12,21 @@ class RoverStatusController extends Controller
 {
     public function heartbeat(Request $request): JsonResponse
     {
-        $rover = $request->user();
+        // Get rover from token or X-Rover-Id header
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        $roverToken = $request->bearerToken();
+
+        if (!$roverId && $roverToken) {
+            $rover = \App\Models\Rover::whereHas('tokens', function ($q) use ($roverToken) {
+                $q->where('token', hash('sha256', $roverToken));
+            })->first();
+        } else {
+            $rover = \App\Models\Rover::find($roverId);
+        }
+
+        if (!$rover) {
+            return response()->json(['message' => 'Rover Not Found or Invalid Token'], 404);
+        }
 
         $wasOffline = ! $rover->isOnline();
 
@@ -30,7 +44,21 @@ class RoverStatusController extends Controller
 
     public function update(UpdateRoverStatusRequest $request): JsonResponse
     {
-        $rover = $request->user();
+        // Get rover from token or X-Rover-Id header
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        $roverToken = $request->bearerToken();
+
+        if (!$roverId && $roverToken) {
+            $rover = \App\Models\Rover::whereHas('tokens', function ($q) use ($roverToken) {
+                $q->where('token', hash('sha256', $roverToken));
+            })->first();
+        } else {
+            $rover = \App\Models\Rover::find($roverId);
+        }
+
+        if (!$rover) {
+            return response()->json(['message' => 'Rover Not Found or Invalid Token'], 404);
+        }
 
         $rover->update($request->validated());
         $rover->update(['last_seen_at' => now()]);

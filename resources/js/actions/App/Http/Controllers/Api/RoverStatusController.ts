@@ -57,7 +57,7 @@ heartbeat.form = heartbeatForm
 
 /**
 * @see \App\Http\Controllers\Api\RoverStatusController::update
-* @see app/Http/Controllers/Api/RoverStatusController.php:31
+* @see app/Http/Controllers/Api/RoverStatusController.php:45
 * @route '/api/rover/status'
 */
 export const update = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -72,7 +72,7 @@ update.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\RoverStatusController::update
-* @see app/Http/Controllers/Api/RoverStatusController.php:31
+* @see app/Http/Controllers/Api/RoverStatusController.php:45
 * @route '/api/rover/status'
 */
 update.url = (options?: RouteQueryOptions) => {
@@ -81,7 +81,7 @@ update.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\RoverStatusController::update
-* @see app/Http/Controllers/Api/RoverStatusController.php:31
+* @see app/Http/Controllers/Api/RoverStatusController.php:45
 * @route '/api/rover/status'
 */
 update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -91,7 +91,7 @@ update.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Api\RoverStatusController::update
-* @see app/Http/Controllers/Api/RoverStatusController.php:31
+* @see app/Http/Controllers/Api/RoverStatusController.php:45
 * @route '/api/rover/status'
 */
 const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -101,7 +101,7 @@ const updateForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> =>
 
 /**
 * @see \App\Http\Controllers\Api\RoverStatusController::update
-* @see app/Http/Controllers/Api/RoverStatusController.php:31
+* @see app/Http/Controllers/Api/RoverStatusController.php:45
 * @route '/api/rover/status'
 */
 updateForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

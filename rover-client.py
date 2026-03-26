@@ -99,6 +99,7 @@ def fetch_pending_commands() -> list:
         url = f"{DASHBOARD_URL}/api/rover/commands/pending"
         headers = {
             "Authorization": f"Bearer {API_TOKEN}",
+            "X-Rover-Id": ROVER_ID,
             "Accept": "application/json"
         }
         
@@ -108,7 +109,7 @@ def fetch_pending_commands() -> list:
             data = response.json()
             return data.get('commands', [])
         else:
-            log(f"Failed to fetch commands: {response.status_code}", 'WARN')
+            log(f"Failed to fetch commands: {response.status_code} - {response.text}", 'WARN')
             return []
     except Exception as e:
         log(f"Error fetching commands: {e}", 'WARN')
@@ -191,6 +192,7 @@ def mark_command_complete(cmd_id: int, status: str, response: Dict[str, Any]):
         url = f"{DASHBOARD_URL}/api/rover/commands/{cmd_id}/complete"
         headers = {
             "Authorization": f"Bearer {API_TOKEN}",
+            "X-Rover-Id": ROVER_ID,
             "Content-Type": "application/json"
         }
         payload = {
@@ -337,6 +339,7 @@ def send_telemetry(telemetry_type: str, data: Dict[str, Any]) -> bool:
     try:
         headers = {
             "Authorization": f"Bearer {API_TOKEN}",
+            "X-Rover-Id": ROVER_ID,
             "Content-Type": "application/json"
         }
         
@@ -364,6 +367,7 @@ def send_heartbeat() -> bool:
     try:
         headers = {
             "Authorization": f"Bearer {API_TOKEN}",
+            "X-Rover-Id": ROVER_ID,
             "Content-Type": "application/json"
         }
         

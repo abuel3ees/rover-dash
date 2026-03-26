@@ -57,7 +57,7 @@ store.form = storeForm
 
 /**
 * @see \App\Http\Controllers\Api\TelemetryController::storeBatch
-* @see app/Http/Controllers/Api/TelemetryController.php:30
+* @see app/Http/Controllers/Api/TelemetryController.php:44
 * @route '/api/telemetry/batch'
 */
 export const storeBatch = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -72,7 +72,7 @@ storeBatch.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\TelemetryController::storeBatch
-* @see app/Http/Controllers/Api/TelemetryController.php:30
+* @see app/Http/Controllers/Api/TelemetryController.php:44
 * @route '/api/telemetry/batch'
 */
 storeBatch.url = (options?: RouteQueryOptions) => {
@@ -81,7 +81,7 @@ storeBatch.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\Api\TelemetryController::storeBatch
-* @see app/Http/Controllers/Api/TelemetryController.php:30
+* @see app/Http/Controllers/Api/TelemetryController.php:44
 * @route '/api/telemetry/batch'
 */
 storeBatch.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -91,7 +91,7 @@ storeBatch.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\Api\TelemetryController::storeBatch
-* @see app/Http/Controllers/Api/TelemetryController.php:30
+* @see app/Http/Controllers/Api/TelemetryController.php:44
 * @route '/api/telemetry/batch'
 */
 const storeBatchForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -101,7 +101,7 @@ const storeBatchForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'
 
 /**
 * @see \App\Http\Controllers\Api\TelemetryController::storeBatch
-* @see app/Http/Controllers/Api/TelemetryController.php:30
+* @see app/Http/Controllers/Api/TelemetryController.php:44
 * @route '/api/telemetry/batch'
 */
 storeBatchForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

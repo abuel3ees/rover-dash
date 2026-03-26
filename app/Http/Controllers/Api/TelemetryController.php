@@ -13,7 +13,21 @@ class TelemetryController extends Controller
 {
     public function store(StoreTelemetryRequest $request): JsonResponse
     {
-        $rover = $request->user();
+        // Get rover from token or X-Rover-Id header
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        $roverToken = $request->bearerToken();
+
+        if (!$roverId && $roverToken) {
+            $rover = \App\Models\Rover::whereHas('tokens', function ($q) use ($roverToken) {
+                $q->where('token', hash('sha256', $roverToken));
+            })->first();
+        } else {
+            $rover = \App\Models\Rover::find($roverId);
+        }
+
+        if (!$rover) {
+            return response()->json(['message' => 'Rover Not Found or Invalid Token'], 404);
+        }
 
         $telemetry = TelemetryData::create([
             'rover_id' => $rover->id,
@@ -29,7 +43,22 @@ class TelemetryController extends Controller
 
     public function storeBatch(StoreBatchTelemetryRequest $request): JsonResponse
     {
-        $rover = $request->user();
+        // Get rover from token or X-Rover-Id header
+        $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
+        $roverToken = $request->bearerToken();
+
+        if (!$roverId && $roverToken) {
+            $rover = \App\Models\Rover::whereHas('tokens', function ($q) use ($roverToken) {
+                $q->where('token', hash('sha256', $roverToken));
+            })->first();
+        } else {
+            $rover = \App\Models\Rover::find($roverId);
+        }
+
+        if (!$rover) {
+            return response()->json(['message' => 'Rover Not Found or Invalid Token'], 404);
+        }
+
         $items = $request->validated('items');
         $ids = [];
 
