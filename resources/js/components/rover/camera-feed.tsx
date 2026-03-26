@@ -8,10 +8,8 @@ interface CameraFeedProps {
 }
 
 export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
-    const imgRef = useRef<HTMLImageElement>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
     const [hasError, setHasError] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [key, setKey] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [debugInfo, setDebugInfo] = useState<string>('');
 
@@ -24,73 +22,62 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
             return;
         }
 
-        const img = imgRef.current;
-
-        if (!img) {
+        const iframe = iframeRef.current;
+        if (!iframe) {
             return;
         }
 
-        const controller = new AbortController();
+        try {
+            setErrorMessage('');
+            setDebugInfo('');
 
-        async function loadStream() {
-            try {
-                setLoading(true);
-                setErrorMessage('');
-                setDebugInfo('');
+            // For MJPEG streams, we use an iframe with an img src pointing to the continuous stream
+            // This allows the browser to handle the MJPEG stream natively at full frame rate
+            const streamSrc = src.includes('ngrok') ? '/rover/stream' : src;
+            
+            // Create HTML content that displays the MJPEG stream
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { margin: 0; padding: 0; background: #000; }
+                        img { display: block; width: 100%; height: 100%; object-fit: cover; }
+                    </style>
+                </head>
+                <body>
+                    <img src="${streamSrc}?t=${Date.now()}" alt="Camera feed" />
+                </body>
+                </html>
+            `;
 
-                // For MJPEG streams, we need to use img src directly
-                // For remote streams (ngrok), use dashboard proxy
-                const imageUrl = src.includes('ngrok') ? '/rover/stream' : src;
+            iframe.srcdoc = htmlContent;
 
-                if (!img) {
-                    return;
-                }
-
-                img.src = imageUrl + `?t=${key}`;
-
-                img.onload = () => {
-                    setLoading(false);
-                    setHasError(false);
-                };
-
-                img.onerror = () => {
-                    setErrorMessage('Failed to load stream frame');
-                    setDebugInfo('Check: 1) Stream URL correct 2) Server running 3) Network accessible');
-                    setHasError(true);
-                    setLoading(false);
-                };
-
-                // For continuous streaming, reload the image periodically
-                const interval = setInterval(() => {
-                    if (!controller.signal.aborted && img) {
-                        img.src = imageUrl + `?t=${Date.now()}`;
-                    }
-                }, 1000); // Refresh every second
-
-                return () => {
-                    clearInterval(interval);
-                };
-            } catch (e: unknown) {
-                const errorMsg = e instanceof Error ? e.message : 'Unknown error';
-                setErrorMessage(errorMsg);
-                setDebugInfo(`Check: 1) Pi camera server running 2) Stream URL correct 3) Network accessible. Error: ${errorMsg}`);
+            // Handle errors
+            iframe.onerror = () => {
+                setErrorMessage('Failed to load stream');
+                setDebugInfo('Check: 1) Stream URL correct 2) Server running 3) Network accessible');
                 setHasError(true);
-                setLoading(false);
-            }
+            };
+
+            // Try to load after a short delay to catch CORS or other errors
+            const timeout = setTimeout(() => {
+                // Keep trying - MJPEG streams are continuous
+            }, 2000);
+
+            return () => {
+                clearTimeout(timeout);
+            };
+        } catch (e: unknown) {
+            const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+            setErrorMessage(errorMsg);
+            setDebugInfo(`Check: 1) Pi camera server running 2) Stream URL correct 3) Network accessible. Error: ${errorMsg}`);
+            setHasError(true);
         }
-
-        const cleanup = loadStream();
-
-        return () => {
-            cleanup?.then((fn) => fn?.());
-            controller.abort();
-        };
-    }, [src, canTryStream, hasError, key]);
+    }, [src, canTryStream, hasError]);
 
     function reconnect() {
         setHasError(false);
-        setLoading(true);
-        setKey((k) => k + 1);
     }
 
     if (!canTryStream || hasError) {
@@ -121,17 +108,14 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
 
     return (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black">
-            <img
-                ref={imgRef}
-                className="h-full w-full object-contain"
-                alt="Camera feed"
+            <iframe
+                ref={iframeRef}
+                className="h-full w-full border-0"
+                title="Camera feed"
+                sandbox="allow-same-origin"
+                style={{ display: hasError ? 'none' : 'block' }}
             />
-            {loading && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="size-5 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
-                </div>
-            )}
-            {!loading && (
+            {!hasError && (
                 <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-white backdrop-blur-sm">
                     <span className="relative flex size-1.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
