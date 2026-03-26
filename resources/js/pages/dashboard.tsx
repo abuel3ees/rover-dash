@@ -177,7 +177,7 @@ export default function Dashboard({
                 <Head title="Dashboard" />
                 <div className="flex h-full flex-1 flex-col items-center justify-center px-6 py-24">
                     <div className="mx-auto max-w-lg text-center">
-                        <div className="mx-auto mb-8 flex size-16 items-center justify-center rounded-2xl border border-border/60 bg-card">
+                        <div className="mx-auto mb-8 flex size-16 items-center justify-center border border-border/60 bg-card">
                             <Radio className="size-7 text-muted-foreground/60" />
                         </div>
                         <h1 className="font-serif text-4xl tracking-tight text-foreground">
@@ -188,7 +188,7 @@ export default function Dashboard({
                             camera streaming, and full directional control from your browser.
                         </p>
                         <div className="mt-8">
-                            <Button asChild size="lg" className="h-11 rounded-lg px-6 text-sm tracking-wide">
+                            <Button asChild size="lg" className="h-11 px-6 text-sm tracking-wide">
                                 <Link href="/rover/setup">
                                     Set up your rover
                                     <ArrowUpRight className="ml-2 size-4" />
@@ -196,7 +196,7 @@ export default function Dashboard({
                             </Button>
                         </div>
 
-                        <div className="mt-16 grid gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 sm:grid-cols-3">
+                        <div className="mt-16 grid gap-px overflow-hidden border border-border/60 bg-border/60 sm:grid-cols-3">
                             {[
                                 {
                                     icon: <Gamepad2 className="size-5 text-foreground/50" />,
@@ -250,7 +250,7 @@ export default function Dashboard({
                     <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
                         <div className="flex items-center gap-4">
                             <div className="relative">
-                                <div className={`flex size-11 items-center justify-center rounded-xl border transition-colors ${
+                                <div className={`flex size-11 items-center justify-center border transition-colors ${
                                     isOnline
                                         ? 'border-emerald-500/30 bg-emerald-500/8'
                                         : 'border-border/60 bg-muted/50'
@@ -298,7 +298,7 @@ export default function Dashboard({
                         </div>
 
                         <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="h-8 text-xs tracking-wide" asChild>
+                            <Button variant="outline" size="sm" className="h-8 text-xs tracking-wide" asChild>
                                 <Link href="/rover/settings">
                                     <Settings className="mr-1.5 size-3.5" />
                                     Settings
@@ -401,7 +401,7 @@ export default function Dashboard({
                                 <div className="h-px flex-1 bg-border/40" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/60 px-4 py-5">
+                                <div className="flex flex-col items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
                                     <RadialGauge
                                         value={battery?.percentage ?? 0}
                                         max={100}
@@ -422,7 +422,7 @@ export default function Dashboard({
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex flex-col items-center justify-center rounded-xl border border-border/40 bg-card/60 px-4 py-5">
+                                <div className="flex flex-col items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
                                     <RadialGauge
                                         value={temperature?.cpu_temp ?? 0}
                                         max={100}
@@ -443,10 +443,10 @@ export default function Dashboard({
                                         </div>
                                     )}
                                 </div>
-                                <div className="flex items-center justify-center rounded-xl border border-border/40 bg-card/60 px-4 py-5">
+                                <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
                                     <Compass heading={gps?.heading ?? 0} speed={gps?.speed} />
                                 </div>
-                                <div className="flex items-center justify-center rounded-xl border border-border/40 bg-card/60 px-4 py-5">
+                                <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
                                     <OrientationDisplay pitch={accel?.pitch ?? 0} roll={accel?.roll ?? 0} />
                                 </div>
                             </div>
@@ -458,7 +458,7 @@ export default function Dashboard({
                                 <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Camera</span>
                                 <div className="h-px flex-1 bg-border/40" />
                             </div>
-                            <div className="overflow-hidden rounded-xl border border-border/40 bg-card/60">
+                            <div className="overflow-hidden border border-border/40 bg-card/60">
                                 <div className="relative aspect-video bg-muted/30">
                                     {isOnline && currentRover.stream_url ? (
                                         <>
@@ -467,7 +467,7 @@ export default function Dashboard({
                                                 alt="Rover camera"
                                                 className="h-full w-full object-cover"
                                             />
-                                            <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-white backdrop-blur-sm">
+                                            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-white">
                                                 <span className="relative flex size-1.5">
                                                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                                                     <span className="relative inline-flex size-1.5 rounded-full bg-white" />
@@ -498,7 +498,7 @@ export default function Dashboard({
                                     <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Activity</span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
-                                <div className="max-h-[280px] overflow-y-auto rounded-xl border border-border/40 bg-card/60 p-4">
+                                <div className="max-h-[280px] overflow-y-auto border border-border/40 bg-card/60 p-4">
                                     <ActivityFeed commands={commands} telemetry={recentTelemetry ?? []} />
                                 </div>
                             </div>
@@ -516,35 +516,35 @@ export default function Dashboard({
                                     {/* ADDED: Full-width Test Connection Button */}
                                     <button
                                         onClick={() => sendQuickCommand('ping', { message: 'Hello from Dashboard!' })}
-                                        className="col-span-2 flex h-11 items-center justify-center gap-2 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-400"
+                                        className="col-span-2 flex h-11 items-center justify-center gap-2 border border-indigo-500/30 bg-indigo-500/10 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-400"
                                     >
                                         <Radio className="size-4" />
                                         Ping Rover (Test Connection)
                                     </button>
                                     <button
                                         onClick={() => sendQuickCommand('stop')}
-                                        className="flex h-11 items-center justify-center gap-2 rounded-lg border border-red-500/20 bg-red-500/8 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/15 dark:text-red-400"
+                                        className="flex h-11 items-center justify-center gap-2 border border-red-500/20 bg-red-500/8 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/15 dark:text-red-400"
                                     >
                                         <Octagon className="size-3.5" />
                                         E-Stop
                                     </button>
                                     <button
                                         onClick={() => sendQuickCommand('move', { direction: 'forward', speed: 50 })}
-                                        className="flex h-11 items-center justify-center gap-2 rounded-lg border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
+                                        className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Send className="size-3.5" />
                                         Forward
                                     </button>
                                     <button
                                         onClick={() => sendQuickCommand('speed', { speed: 25 })}
-                                        className="flex h-11 items-center justify-center gap-2 rounded-lg border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
+                                        className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Zap className="size-3.5" />
                                         Slow
                                     </button>
                                     <button
                                         onClick={() => sendQuickCommand('speed', { speed: 75 })}
-                                        className="flex h-11 items-center justify-center gap-2 rounded-lg border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
+                                        className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Zap className="size-3.5" />
                                         Fast
@@ -559,7 +559,7 @@ export default function Dashboard({
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 {stats && stats.totalCommands > 0 ? (
-                                    <div className="rounded-xl border border-border/40 bg-card/60 p-4">
+                                    <div className="border border-border/40 bg-card/60 p-4">
                                         <div className="mb-3">
                                             <div className="flex items-baseline justify-between">
                                                 <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Success rate</span>
@@ -572,7 +572,7 @@ export default function Dashboard({
                                                 />
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-border/30">
+                                        <div className="grid grid-cols-2 gap-px overflow-hidden border border-border/30 bg-border/30">
                                             {(
                                                 [
                                                     ['executed', 'Executed', 'text-emerald-600 dark:text-emerald-400'],
@@ -596,7 +596,7 @@ export default function Dashboard({
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex flex-col items-center gap-2 rounded-xl border border-border/40 bg-card/60 py-8">
+                                    <div className="flex flex-col items-center gap-2 border border-border/40 bg-card/60 py-8">
                                         <Send className="size-5 text-muted-foreground/20" />
                                         <span className="text-[11px] text-muted-foreground/40 tracking-wide">No commands sent yet</span>
                                     </div>
@@ -609,7 +609,7 @@ export default function Dashboard({
                                     <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">System</span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
-                                <div className="rounded-xl border border-border/40 bg-card/60 p-4">
+                                <div className="border border-border/40 bg-card/60 p-4">
                                     <div className="space-y-3">
                                         {[
                                             { icon: <Globe className="size-3.5" />, label: 'IP Address', value: currentRover.ip_address ?? 'Unknown' },
@@ -638,7 +638,7 @@ export default function Dashboard({
                     </div>
 
                     {/* ═══ Navigation Links ════════════════════════════════ */}
-                    <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-border/40 bg-border/30 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-8 grid gap-px overflow-hidden border border-border/40 bg-border/30 sm:grid-cols-2 lg:grid-cols-4">
                         {[
                             {
                                 href: '/control',
@@ -670,7 +670,7 @@ export default function Dashboard({
                                 href={card.href}
                                 className="group flex items-center gap-4 bg-card/80 px-5 py-4 transition-colors hover:bg-accent/40"
                             >
-                                <div className="flex size-10 items-center justify-center rounded-lg bg-muted/40 text-foreground/40 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                                <div className="flex size-10 items-center justify-center bg-muted/40 text-foreground/40 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                                     {card.icon}
                                 </div>
                                 <div className="flex-1 min-w-0">

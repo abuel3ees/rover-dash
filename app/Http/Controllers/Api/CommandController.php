@@ -14,14 +14,19 @@ class CommandController extends Controller
     public function pending(Request $request): JsonResponse
     {
         $roverId = $request->header('X-Rover-Id') ?? $request->query('rover_id');
-        
-        // Let's be very aggressive in finding the rover locally
-        $rover = $request->user() ?? \App\Models\Rover::where('name', 'rover-01')
-                   ->orWhere('id', 1) 
-                   ->first();
+        $roverToken = $request->bearerToken();
+
+        // Find rover by token from header or Authorization bearer
+        if (!$roverId && $roverToken) {
+            $rover = \App\Models\Rover::whereHas('tokens', function ($q) use ($roverToken) {
+                $q->where('token', hash('sha256', $roverToken));
+            })->first();
+        } else {
+            $rover = \App\Models\Rover::find($roverId);
+        }
 
         if (!$rover) {
-            return response()->json(['message' => 'Local Rover Not Found'], 404);
+            return response()->json(['message' => 'Rover Not Found or Invalid Token'], 404);
         }
 
         $commands = $rover->pendingCommands()->oldest()->get();

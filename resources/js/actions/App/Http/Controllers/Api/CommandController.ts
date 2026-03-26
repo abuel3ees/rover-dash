@@ -82,7 +82,7 @@ pending.form = pendingForm
 
 /**
 * @see \App\Http\Controllers\Api\CommandController::complete
-* @see app/Http/Controllers/Api/CommandController.php:42
+* @see app/Http/Controllers/Api/CommandController.php:47
 * @route '/api/rover/commands/{command}/complete'
 */
 export const complete = (args: { command: number | { id: number } } | [command: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -97,7 +97,7 @@ complete.definition = {
 
 /**
 * @see \App\Http\Controllers\Api\CommandController::complete
-* @see app/Http/Controllers/Api/CommandController.php:42
+* @see app/Http/Controllers/Api/CommandController.php:47
 * @route '/api/rover/commands/{command}/complete'
 */
 complete.url = (args: { command: number | { id: number } } | [command: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions) => {
@@ -130,7 +130,7 @@ complete.url = (args: { command: number | { id: number } } | [command: number | 
 
 /**
 * @see \App\Http\Controllers\Api\CommandController::complete
-* @see app/Http/Controllers/Api/CommandController.php:42
+* @see app/Http/Controllers/Api/CommandController.php:47
 * @route '/api/rover/commands/{command}/complete'
 */
 complete.post = (args: { command: number | { id: number } } | [command: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -140,7 +140,7 @@ complete.post = (args: { command: number | { id: number } } | [command: number |
 
 /**
 * @see \App\Http\Controllers\Api\CommandController::complete
-* @see app/Http/Controllers/Api/CommandController.php:42
+* @see app/Http/Controllers/Api/CommandController.php:47
 * @route '/api/rover/commands/{command}/complete'
 */
 const completeForm = (args: { command: number | { id: number } } | [command: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -150,7 +150,7 @@ const completeForm = (args: { command: number | { id: number } } | [command: num
 
 /**
 * @see \App\Http\Controllers\Api\CommandController::complete
-* @see app/Http/Controllers/Api/CommandController.php:42
+* @see app/Http/Controllers/Api/CommandController.php:47
 * @route '/api/rover/commands/{command}/complete'
 */
 completeForm.post = (args: { command: number | { id: number } } | [command: number | { id: number } ] | number | { id: number }, options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

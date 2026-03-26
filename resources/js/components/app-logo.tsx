@@ -3,7 +3,7 @@ import { Radio } from 'lucide-react';
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+            <div className="flex aspect-square size-8 items-center justify-center bg-sidebar-primary text-sidebar-primary-foreground">
                 <Radio className="size-5" />
             </div>
             <div className="ml-1 grid flex-1 text-left">
