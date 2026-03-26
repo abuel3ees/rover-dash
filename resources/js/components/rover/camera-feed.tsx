@@ -12,6 +12,7 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
     const [hasError, setHasError] = useState(false);
     const [loading, setLoading] = useState(true);
     const [key, setKey] = useState(0);
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
     const src = streamUrl ?? '/rover/stream';
     const canTryStream = streamUrl ? true : isOnline;
@@ -102,6 +103,8 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
                     return;
                 }
 
+                const errorMsg = e instanceof Error ? e.message : 'Unknown error';
+                setErrorMessage(errorMsg);
                 setHasError(true);
                 setLoading(false);
             }
@@ -120,10 +123,12 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
 
     if (!canTryStream || hasError) {
         return (
-            <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-lg border border-border/40 bg-muted/20">
+            <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-lg border border-border/40 bg-muted/20 p-4">
                 <VideoOff className="size-8 text-muted-foreground/30" />
-                <p className="text-xs text-muted-foreground/50 tracking-wide">
-                    {hasError ? 'Stream unavailable' : 'Rover offline'}
+                <p className="text-xs text-muted-foreground/50 tracking-wide text-center max-w-xs">
+                    {hasError 
+                        ? errorMessage || 'Stream unavailable - check camera server and network connection' 
+                        : 'Rover offline'}
                 </p>
                 {hasError && (
                     <Button variant="outline" size="sm" className="h-7 rounded-lg text-xs" onClick={reconnect}>

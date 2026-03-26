@@ -160,8 +160,11 @@ export default function RoverSettings({
                                     onChange={(e) =>
                                         setData('stream_url', e.target.value)
                                     }
-                                    placeholder="http://192.168.1.50:8081/stream.mjpg"
+                                    placeholder="http://192.168.1.50:5000/video_feed"
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Enter your Pi's video stream URL. For ngrok tunnels, paste your tunnel URL here.
+                                </p>
                                 <InputError message={errors.stream_url} />
                             </div>
 

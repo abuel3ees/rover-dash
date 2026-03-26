@@ -10,9 +10,33 @@ If you see errors like:
 
 This means your Pi's video stream endpoint needs CORS headers configured.
 
+## Quick Fix - Use Our Provided Script
+
+We've provided a ready-to-use `pi-camera-server.py` that handles CORS properly:
+
+### On Your Raspberry Pi:
+
+```bash
+# 1. Install required packages
+pip install flask flask-cors opencv-python picamera2
+
+# 2. Copy the script from the repo
+curl -O https://raw.githubusercontent.com/abuel3ees/rover-dash/main/pi-camera-server.py
+
+# 3. Run it
+python3 pi-camera-server.py
+
+# 4. Expose via ngrok
+ngrok http 5000
+```
+
+Done! Your video feed now supports CORS.
+
+---
+
 ## Solution for Python Flask/FastAPI
 
-### If using Flask:
+### If using Flask (with our script above):
 
 ```python
 from flask import Flask

@@ -24,18 +24,31 @@ class StreamController extends Controller
         $client = new Client(['verify' => false]);
 
         try {
+            Log::info('Attempting to proxy stream', ['url' => $streamUrl]);
+
             $upstream = $client->get($streamUrl, [
                 'headers' => [
                     'ngrok-skip-browser-warning' => 'true',
                     'User-Agent' => 'RoverDashboard/1.0',
+                    'Accept' => 'image/jpeg, multipart/x-mixed-replace',
                 ],
                 'stream' => true,
-                'connect_timeout' => 10,
-                'timeout' => 0,
+                'connect_timeout' => 15,
+                'timeout' => 30,
+                'read_timeout' => 30,
+            ]);
+
+            Log::info('Stream connection established', [
+                'status' => $upstream->getStatusCode(),
+                'content_type' => $upstream->getHeaderLine('Content-Type'),
             ]);
         } catch (GuzzleException $e) {
-            Log::error('Stream proxy failed', ['url' => $streamUrl, 'error' => $e->getMessage()]);
-            abort(502, $e->getMessage());
+            Log::error('Stream proxy failed', [
+                'url' => $streamUrl,
+                'error' => $e->getMessage(),
+                'code' => $e->getCode(),
+            ]);
+            abort(502, 'Failed to connect to camera stream: ' . $e->getMessage());
         }
 
         $body = $upstream->getBody();
