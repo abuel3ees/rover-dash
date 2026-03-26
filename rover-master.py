@@ -412,12 +412,9 @@ def rover_client_thread():
     log_section("ROVER CLIENT THREAD STARTED")
     log(f"Commands: polling every {COMMAND_POLL_INTERVAL}s")
     log(f"Telemetry: sending every {TELEMETRY_INTERVAL}s")
-    log(f"ngrok URL check: every 30s")
     
     last_telemetry_time = time.time()
     last_heartbeat_time = time.time()
-    last_ngrok_check_time = time.time()
-    last_ngrok_url = None
     
     while not stop_event.is_set():
         try:
@@ -427,19 +424,6 @@ def rover_client_thread():
             if current_time - last_heartbeat_time >= 10:
                 send_heartbeat()
                 last_heartbeat_time = current_time
-            
-            # Check ngrok URL every 30 seconds (in case it changes)
-            if current_time - last_ngrok_check_time >= 30:
-                ngrok_url = get_ngrok_url()
-                if ngrok_url and ngrok_url != last_ngrok_url:
-                    log(f"🔄 ngrok URL changed: {ngrok_url}")
-                    stream_url = f"{ngrok_url}/video_feed"
-                    if update_stream_url(stream_url):
-                        log(f"✓ Updated dashboard with new ngrok URL")
-                        last_ngrok_url = ngrok_url
-                    else:
-                        log(f"⚠️  Failed to update dashboard with new ngrok URL", 'WARN')
-                last_ngrok_check_time = current_time
             
             # Check for commands
             commands = fetch_pending_commands()
@@ -489,45 +473,28 @@ def start_camera_server():
         return False
 
 
-def start_ngrok():
-    """Start ngrok tunnel to camera server on port 5000"""
-    log_section("STARTING NGROK TUNNEL")
+def set_stream_url_from_env():
+    """Read stream URL from environment or .env file"""
+    stream_url = os.getenv('STREAM_URL')
+    if not stream_url:
+        try:
+            with open(ENV_FILE, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('STREAM_URL='):
+                        stream_url = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        break
+        except:
+            pass
     
-    try:
-        with open(NGROK_LOG, 'a') as log_file:
-            process = subprocess.Popen(
-                ['ngrok', 'http', '5000', '--log=stdout'],
-                stdout=log_file,
-                stderr=subprocess.STDOUT,
-                text=True
-            )
-        
-        processes['ngrok'] = process
-        log(f"✓ ngrok started (PID: {process.pid})")
-        log(f"  Logging to: {NGROK_LOG}")
-        
-        time.sleep(3)
-        log("⏳ ngrok tunnel starting... (check ngrok.log for tunnel URL)")
-        log("")
-        return True
-    except Exception as e:
-        log(f"❌ Failed to start ngrok: {e}", 'ERROR')
-        return False
-
-
-def get_ngrok_url():
-    """Attempt to get the ngrok tunnel URL"""
-    try:
-        response = requests.get('http://127.0.0.1:4040/api/tunnels', timeout=2)
-        if response.status_code == 200:
-            tunnels = response.json()
-            for tunnel in tunnels.get('tunnels', []):
-                # Return the public_url (https://xxxx.ngrok.io)
-                if tunnel['config']['addr'] == 'localhost:5000':
-                    return tunnel['public_url']
-    except:
-        pass
-    return None
+    if stream_url:
+        log(f"📹 Stream URL from config: {stream_url}")
+        if update_stream_url(stream_url):
+            log(f"✓ Dashboard updated with stream URL")
+        else:
+            log(f"⚠️  Could not update dashboard with stream URL", 'WARN')
+    else:
+        log(f"ℹ️  No STREAM_URL configured - you can set it manually in .env or environment", 'WARN')
 
 
 def open_camera_in_browser(url: str):
@@ -569,9 +536,6 @@ def monitor_processes():
                     
                     if name == 'camera-server':
                         if not start_camera_server():
-                            log(f"❌ Failed to restart {name}", 'ERROR')
-                    elif name == 'ngrok':
-                        if not start_ngrok():
                             log(f"❌ Failed to restart {name}", 'ERROR')
         except Exception as e:
             log(f"Error in monitoring: {e}", 'ERROR')
@@ -637,42 +601,24 @@ def main():
     if not start_camera_server():
         log("⚠️  Camera server failed to start", 'WARN')
     
-    # Start ngrok in subprocess
-    if not start_ngrok():
-        log("⚠️  ngrok failed to start", 'WARN')
-    
     log_section("SERVICES RUNNING")
     log("")
     log("📊 Rover Client:     Commands polling + Telemetry (running in thread)")
     log("📹 Camera Server:    http://127.0.0.1:5000/video_feed")
-    log("🌐 ngrok Tunnel:     Public tunnel to camera server")
+    log("🌐 ngrok Tunnel:     (start manually and set STREAM_URL in .env)")
     log("")
     log("Logs available in:")
     log(f"  - Master:         {MASTER_LOG}")
     log(f"  - Camera Server:  {CAMERA_SERVER_LOG}")
-    log(f"  - ngrok:          {NGROK_LOG}")
     log("")
     log("Press Ctrl+C to stop all services")
     log("")
     
-    # Check ngrok URL and send to dashboard
-    time.sleep(4)
-    ngrok_url = get_ngrok_url()
-    if ngrok_url:
-        log(f"🎉 ngrok tunnel URL: {ngrok_url}")
-        log(f"   Camera stream: {ngrok_url}/video_feed")
-        
-        # Send stream URL to dashboard
-        stream_url = f"{ngrok_url}/video_feed"
-        if update_stream_url(stream_url):
-            log(f"✓ Dashboard updated with stream URL")
-        else:
-            log(f"⚠️  Could not update dashboard with stream URL", 'WARN')
-        
-        log("")
-        
-        # Open in browser
-        open_camera_in_browser(ngrok_url)
+    # Update stream URL if provided in config
+    time.sleep(2)
+    set_stream_url_from_env()
+    
+    log("")
     
     # Monitor processes
     try:
