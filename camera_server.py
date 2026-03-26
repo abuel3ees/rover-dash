@@ -31,11 +31,11 @@ CORS(app, resources={
 try:
     picam2 = Picamera2()
     config = picam2.create_preview_configuration(
-        main={"size": (640, 480), "format": "BGR888"}
+        main={"size": (1280, 720), "format": "BGR888"}
     )
     picam2.configure(config)
     picam2.start()
-    print("✓ Camera initialized successfully")
+    print("✓ Camera initialized successfully (1280x720)")
 except Exception as e:
     print(f"✗ Failed to initialize camera: {e}")
     picam2 = None
@@ -50,9 +50,9 @@ def generate_frames():
                 # Convert from RGB to BGR for OpenCV compatibility
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             else:
-                # Fallback: create a dummy frame if camera unavailable
-                frame = cv2.zeros((480, 640, 3), dtype='uint8')
-                cv2.putText(frame, "Camera Not Available", (150, 240),
+                # Fallback: create a dummy frame if camera unavailable (1280x720)
+                frame = cv2.zeros((720, 1280, 3), dtype='uint8')
+                cv2.putText(frame, "Camera Not Available", (450, 360),
                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
             # Compress frame to JPEG
