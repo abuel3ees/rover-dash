@@ -448,23 +448,44 @@ def rover_client_thread():
 # ============================================================================
 
 def start_camera_server():
-    """Start the camera server (Flask + picamera2)"""
+    """Start the camera server (Flask + picamera2 + Twitch streaming)"""
     log_section("STARTING CAMERA SERVER")
     
     try:
+        # Read Twitch stream key from .env
+        twitch_stream_key = ''
+        try:
+            with open(ENV_FILE, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('TWITCH_STREAM_KEY='):
+                        twitch_stream_key = line.split('=', 1)[1].strip().strip('"').strip("'")
+                        break
+        except:
+            pass
+        
+        # Set up environment with Twitch key
+        env = os.environ.copy()
+        if twitch_stream_key:
+            env['TWITCH_STREAM_KEY'] = twitch_stream_key
+            log(f"✓ Using Twitch Stream Key from .env")
+        else:
+            log(f"⚠️  No TWITCH_STREAM_KEY in .env - camera server will not stream to Twitch")
+        
         with open(CAMERA_SERVER_LOG, 'a') as log_file:
             process = subprocess.Popen(
                 ['python3', str(CONFIG_DIR / 'camera_server.py')],
                 cwd=str(CONFIG_DIR),
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
-                text=True
+                text=True,
+                env=env
             )
         
         processes['camera-server'] = process
         log(f"✓ Camera Server started (PID: {process.pid})")
         log(f"  Logging to: {CAMERA_SERVER_LOG}")
-        log(f"  Streaming on: http://0.0.0.0:5000/video_feed")
+        log(f"  Streaming to: Twitch Live (if key configured)")
         
         time.sleep(2)
         return True

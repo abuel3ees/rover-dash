@@ -10,6 +10,7 @@ This streams directly to Twitch Live, then you embed the stream in the dashboard
 import cv2
 import subprocess
 import os
+import sys
 from flask import Flask, jsonify
 from picamera2 import Picamera2
 import logging
@@ -53,32 +54,41 @@ def start_youtube_stream():
         # FFmpeg command to stream video from camera to Twitch
         cmd = [
             'ffmpeg',
+            '-loglevel', 'error',  # Only show errors
             '-f', 'rawvideo',
-            '-pix_fmt', 'bgr24',
+            '-pix_fmt', 'rgb24',  # Picamera2 returns RGB format
             '-s', '1280x720',
             '-r', '30',
             '-i', 'pipe:0',
             '-c:v', 'libx264',
-            '-preset', 'veryfast',
+            '-preset', 'ultrafast',  # Faster than veryfast
             '-b:v', '2500k',
             '-maxrate', '2500k',
             '-bufsize', '5000k',
+            '-x264opts', 'nal-hrd=cbr:force-cfr=1',
+            '-g', '60',  # GOP size
             '-f', 'flv',
+            '-flvflags', 'no_duration_filesize',
             f'{TWITCH_RTMP_URL}/{TWITCH_STREAM_KEY}'
         ]
+        
+        print(f"🔄 Connecting to Twitch RTMP: {TWITCH_RTMP_URL}")
+        print(f"🔑 Stream Key: {TWITCH_STREAM_KEY[:10]}...")
         
         ffmpeg_process = subprocess.Popen(
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            bufsize=10 ** 8
+            bufsize=10 ** 6
         )
         print(f"✓ FFmpeg process started (PID: {ffmpeg_process.pid})")
-        print(f"✓ Streaming to Twitch...")
+        print(f"✓ Streaming to Twitch Live...")
         return True
     except Exception as e:
         print(f"❌ Failed to start FFmpeg: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -87,35 +97,60 @@ def stream_to_youtube():
     global ffmpeg_process
     
     if not ffmpeg_process:
+        print("❌ FFmpeg process not initialized")
         return
     
     frame_count = 0
+    error_count = 0
+    
+    print("📹 Starting frame capture loop...")
+    
     while ffmpeg_process and ffmpeg_process.poll() is None:
         try:
             if picam2:
                 frame = picam2.capture_array()
-                # Convert from RGB to BGR for OpenCV compatibility
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                # Picamera2 returns RGB format - keep as is for rgb24 FFmpeg input
             else:
                 # Fallback: create a dummy frame if camera unavailable
                 frame = cv2.zeros((720, 1280, 3), dtype='uint8')
                 cv2.putText(frame, "Camera Not Available", (450, 360),
                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
-            # Write frame to FFmpeg stdin
-            ffmpeg_process.stdin.write(frame.tobytes())
-            ffmpeg_process.stdin.flush()
+            # Write raw frame bytes to FFmpeg stdin
+            try:
+                ffmpeg_process.stdin.write(frame.tobytes())
+                ffmpeg_process.stdin.flush()
+            except (BrokenPipeError, OSError) as e:
+                error_count += 1
+                print(f"⚠️  Pipe error: {e}")
+                if error_count > 5:
+                    print("❌ Too many pipe errors, exiting")
+                    break
+                continue
             
             frame_count += 1
-            if frame_count % 30 == 0:
-                print(f"Streamed {frame_count} frames to YouTube")
+            if frame_count % 300 == 0:  # Print every 10 seconds at 30fps
+                print(f"✓ {frame_count} frames sent to Twitch")
+                
+        except KeyboardInterrupt:
+            print("⏸️  Interrupted by user")
+            break
         except Exception as e:
-            print(f"Error streaming frame: {e}")
+            print(f"❌ Error: {e}")
             break
     
+    print("📹 Frame capture loop ended")
+    
     if ffmpeg_process:
-        ffmpeg_process.stdin.close()
-        ffmpeg_process.wait()
+        try:
+            ffmpeg_process.stdin.close()
+        except:
+            pass
+        try:
+            ffmpeg_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            ffmpeg_process.kill()
+        print("✓ FFmpeg process stopped")
 
 
 @app.route('/health')
@@ -145,19 +180,18 @@ if __name__ == "__main__":
     print("  Camera Server - Twitch Live Streaming")
     print("=" * 70)
     print("")
-    print("Setup Instructions:")
-    print("1. Go to https://www.twitch.tv/settings/channel")
-    print("2. Scroll to 'Stream Key' and click 'Show'")
-    print("3. Copy your Stream Key")
-    print("4. Set environment variable: export TWITCH_STREAM_KEY='your_key_here'")
-    print("5. Run this script")
-    print("")
-    print("Stream will be UNLISTED (not in directory, only via direct link)")
-    print("")
-    print("Health check at: http://0.0.0.0:5000/health")
-    print("Twitch status: http://0.0.0.0:5000/youtube-status")
-    print("")
-    print("Press Ctrl+C to stop")
+    
+    if not TWITCH_STREAM_KEY:
+        print("❌ TWITCH_STREAM_KEY environment variable not set!")
+        print("")
+        print("Setup Instructions:")
+        print("1. Go to https://www.twitch.tv/settings/channel")
+        print("2. Copy your Stream Key")
+        print("3. Add to .env: TWITCH_STREAM_KEY='your_key_here'")
+        print("")
+        sys.exit(1)
+    
+    print("Starting Twitch Live Streaming...")
     print("")
     
     # Start Twitch streaming in background thread
@@ -165,15 +199,24 @@ if __name__ == "__main__":
         stream_thread = threading.Thread(target=stream_to_youtube, daemon=True)
         stream_thread.start()
         print("✓ Streaming thread started")
+        print("")
+    else:
+        print("❌ Failed to start streaming")
+        sys.exit(1)
     
     try:
+        print("Starting Flask server on http://0.0.0.0:5000")
         app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
     except KeyboardInterrupt:
-        print("\nShutting down camera server...")
+        print("\n\nShutting down camera server...")
         if ffmpeg_process:
-            ffmpeg_process.stdin.close()
+            try:
+                ffmpeg_process.stdin.close()
+            except:
+                pass
             ffmpeg_process.wait()
         if picam2:
             picam2.stop()
-        print("Camera server stopped")
+        print("✓ Camera server stopped")
+        sys.exit(0)
 
