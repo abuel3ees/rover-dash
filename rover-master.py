@@ -15,7 +15,7 @@ import subprocess
 import signal
 import requests
 import threading
-from pathlib import Path
+from pathlib import Path, Path
 from datetime import datetime, timezone
 from typing import Dict, Any
 
@@ -377,16 +377,25 @@ def update_stream_url(stream_url: str) -> bool:
         }
         
         url = f"{DASHBOARD_URL}/api/rover/settings"
+        log(f"Sending stream URL to {url}", 'DEBUG')
+        log(f"  Headers: Authorization=Bearer***, X-Rover-Id={ROVER_ID}", 'DEBUG')
+        log(f"  Payload: {payload}", 'DEBUG')
+        
         response = requests.patch(url, json=payload, headers=headers, timeout=5)
+        
+        log(f"Response status: {response.status_code}", 'DEBUG')
         
         if response.status_code in [200, 201]:
             log(f"✓ Updated rover stream URL: {stream_url}")
             return True
         else:
             log(f"⚠️  Failed to update stream URL: {response.status_code}", 'WARN')
+            log(f"  Response: {response.text}", 'WARN')
             return False
     except Exception as e:
         log(f"Error updating stream URL: {e}", 'WARN')
+        import traceback
+        log(f"  Traceback: {traceback.format_exc()}", 'WARN')
         return False
 
 
@@ -497,6 +506,7 @@ def get_ngrok_url():
         if response.status_code == 200:
             tunnels = response.json()
             for tunnel in tunnels.get('tunnels', []):
+                # Return the public_url (https://xxxx.ngrok.io)
                 if tunnel['config']['addr'] == 'localhost:5000':
                     return tunnel['public_url']
     except:
