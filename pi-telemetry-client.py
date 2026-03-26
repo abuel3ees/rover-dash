@@ -16,7 +16,7 @@ import json
 import time
 import subprocess
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
@@ -48,6 +48,7 @@ class TelemetryClient:
         if ENV_FILE.exists():
             try:
                 with open(ENV_FILE, 'r') as f:
+                    loaded_vars = {}
                     for line in f:
                         line = line.strip()
                         if line and not line.startswith('#') and '=' in line:
@@ -57,15 +58,21 @@ class TelemetryClient:
                             
                             if key == 'DASHBOARD_URL':
                                 self.dashboard_url = value
+                                loaded_vars['DASHBOARD_URL'] = value
                             elif key in ['ROVER_TOKEN', 'API_TOKEN']:
                                 self.rover_token = value
+                                loaded_vars[key] = '***'  # masked for security
                             elif key == 'ROVER_ID':
                                 self.rover_id = value
+                                loaded_vars['ROVER_ID'] = value
                     
-                    if self.rover_token:
-                        self.log(f"✓ Configuration loaded from {ENV_FILE}")
+                    if loaded_vars:
+                        vars_str = ', '.join(loaded_vars.keys())
+                        print(f"✓ Loaded from {ENV_FILE}: {vars_str}")
             except Exception as e:
-                self.log(f"Warning: Error loading .env file: {e}")
+                print(f"⚠️  Error loading .env file: {e}")
+        else:
+            print(f"⚠️  .env file not found at {ENV_FILE}")
 
     def load_config(self):
         """Load configuration from config.json (overrides .env if present)"""
@@ -381,7 +388,7 @@ class TelemetryClient:
             payload = {
                 'type': telemetry_type,
                 'data': data,
-                'recorded_at': datetime.utcnow().isoformat() + 'Z'
+                'recorded_at': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
             }
             
             url = f"{self.dashboard_url}/api/telemetry"

@@ -57,7 +57,7 @@ store.form = storeForm
 
 /**
 * @see \App\Http\Controllers\RoverTokenController::destroy
-* @see app/Http/Controllers/RoverTokenController.php:24
+* @see app/Http/Controllers/RoverTokenController.php:31
 * @route '/rover/token'
 */
 export const destroy = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -72,7 +72,7 @@ destroy.definition = {
 
 /**
 * @see \App\Http\Controllers\RoverTokenController::destroy
-* @see app/Http/Controllers/RoverTokenController.php:24
+* @see app/Http/Controllers/RoverTokenController.php:31
 * @route '/rover/token'
 */
 destroy.url = (options?: RouteQueryOptions) => {
@@ -81,7 +81,7 @@ destroy.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\RoverTokenController::destroy
-* @see app/Http/Controllers/RoverTokenController.php:24
+* @see app/Http/Controllers/RoverTokenController.php:31
 * @route '/rover/token'
 */
 destroy.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
@@ -91,7 +91,7 @@ destroy.delete = (options?: RouteQueryOptions): RouteDefinition<'delete'> => ({
 
 /**
 * @see \App\Http\Controllers\RoverTokenController::destroy
-* @see app/Http/Controllers/RoverTokenController.php:24
+* @see app/Http/Controllers/RoverTokenController.php:31
 * @route '/rover/token'
 */
 const destroyForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -106,7 +106,7 @@ const destroyForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> =
 
 /**
 * @see \App\Http\Controllers\RoverTokenController::destroy
-* @see app/Http/Controllers/RoverTokenController.php:24
+* @see app/Http/Controllers/RoverTokenController.php:31
 * @route '/rover/token'
 */
 destroyForm.delete = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

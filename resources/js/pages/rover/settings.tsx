@@ -30,7 +30,7 @@ export default function RoverSettings({
     rover: Rover;
     hasToken: boolean;
 }) {
-    const { flash } = usePage<{ flash: { token?: string } }>().props;
+    const { flash } = usePage<{ flash: { token?: string; error?: string; success?: string } }>().props;
     const [showToken, setShowToken] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -202,6 +202,22 @@ export default function RoverSettings({
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {flash?.error && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950">
+                                <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                    ❌ {flash.error}
+                                </p>
+                            </div>
+                        )}
+
+                        {flash?.success && !flash?.token && (
+                            <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
+                                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                    ✅ {flash.success}
+                                </p>
+                            </div>
+                        )}
+
                         {flash?.token && (
                             <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
                                 <p className="mb-2 text-sm font-medium text-green-800 dark:text-green-200">
