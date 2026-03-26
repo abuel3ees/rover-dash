@@ -1,5 +1,5 @@
 import { RefreshCw, VideoOff } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface CameraFeedProps {
@@ -8,12 +8,51 @@ interface CameraFeedProps {
 }
 
 export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
+    const imgRef = useRef<HTMLImageElement>(null);
     const [hasError, setHasError] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
 
-    // Use dashboard proxy for remote streams, direct URL for local
-    const src = streamUrl ?? '/rover/stream';
+    // Use dashboard proxy for MJPEG streams
     const canTryStream = streamUrl ? true : isOnline;
+
+    useEffect(() => {
+        if (!canTryStream || hasError) {
+            return;
+        }
+
+        const img = imgRef.current;
+        if (!img) return;
+
+        let isMounted = true;
+        const controller = new AbortController();
+
+        function loadFrame() {
+            if (!isMounted || !img) return;
+            
+            img.src = `/rover/stream?t=${Date.now()}`;
+        }
+
+        // Load first frame
+        loadFrame();
+
+        // Reload frame every 100ms for smooth streaming (10 FPS)
+        const interval = setInterval(() => {
+            if (isMounted) {
+                loadFrame();
+            }
+        }, 100);
+
+        img.onerror = () => {
+            setErrorMessage('Failed to load stream frame');
+            setHasError(true);
+        };
+
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+            controller.abort();
+        };
+    }, [canTryStream, hasError]);
 
     function reconnect() {
         setHasError(false);
@@ -44,13 +83,9 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
     return (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black flex items-center justify-center">
             <img
-                src={src}
+                ref={imgRef}
                 alt="Camera feed"
-                className="max-w-full max-h-full"
-                onError={() => {
-                    setErrorMessage('Failed to load stream');
-                    setHasError(true);
-                }}
+                className="max-w-full max-h-full object-contain"
             />
             {!hasError && (
                 <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest text-white backdrop-blur-sm">
