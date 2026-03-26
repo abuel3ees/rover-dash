@@ -412,17 +412,34 @@ def rover_client_thread():
     log_section("ROVER CLIENT THREAD STARTED")
     log(f"Commands: polling every {COMMAND_POLL_INTERVAL}s")
     log(f"Telemetry: sending every {TELEMETRY_INTERVAL}s")
+    log(f"ngrok URL check: every 30s")
     
     last_telemetry_time = time.time()
     last_heartbeat_time = time.time()
+    last_ngrok_check_time = time.time()
+    last_ngrok_url = None
     
     while not stop_event.is_set():
         try:
-            # Send heartbeat every 10 seconds (more frequent than telemetry)
             current_time = time.time()
+            
+            # Send heartbeat every 10 seconds (more frequent than telemetry)
             if current_time - last_heartbeat_time >= 10:
                 send_heartbeat()
                 last_heartbeat_time = current_time
+            
+            # Check ngrok URL every 30 seconds (in case it changes)
+            if current_time - last_ngrok_check_time >= 30:
+                ngrok_url = get_ngrok_url()
+                if ngrok_url and ngrok_url != last_ngrok_url:
+                    log(f"🔄 ngrok URL changed: {ngrok_url}")
+                    stream_url = f"{ngrok_url}/video_feed"
+                    if update_stream_url(stream_url):
+                        log(f"✓ Updated dashboard with new ngrok URL")
+                        last_ngrok_url = ngrok_url
+                    else:
+                        log(f"⚠️  Failed to update dashboard with new ngrok URL", 'WARN')
+                last_ngrok_check_time = current_time
             
             # Check for commands
             commands = fetch_pending_commands()
@@ -430,7 +447,6 @@ def rover_client_thread():
                 execute_command(cmd)
             
             # Send telemetry periodically
-            current_time = time.time()
             if current_time - last_telemetry_time >= TELEMETRY_INTERVAL:
                 log("📊 Collecting and sending telemetry...")
                 collect_and_send_telemetry()
