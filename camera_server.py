@@ -43,6 +43,7 @@ except Exception as e:
 
 def generate_frames():
     """Generate MJPEG frames from camera"""
+    frame_count = 0
     while True:
         try:
             if picam2:
@@ -55,13 +56,22 @@ def generate_frames():
                 cv2.putText(frame, "Camera Not Available", (150, 240),
                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             
-            # Compress frame to JPEG
-            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            # Compress frame to JPEG with higher quality for better image
+            ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
+            if not ret:
+                continue
+                
             frame_bytes = buffer.tobytes()
             
             # Yield frame in MJPEG format
             yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n'
+                   b'Content-Length: ' + str(len(frame_bytes)).encode() + b'\r\n'
+                   b'\r\n' + frame_bytes + b'\r\n')
+            
+            frame_count += 1
+            if frame_count % 30 == 0:
+                print(f"Streamed {frame_count} frames")
         except Exception as e:
             print(f"Error generating frame: {e}")
             continue
