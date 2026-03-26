@@ -8,13 +8,14 @@ interface CameraFeedProps {
 }
 
 export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const imgRef = useRef<HTMLImageElement>(null);
     const [hasError, setHasError] = useState(false);
     const [loading, setLoading] = useState(true);
     const [key, setKey] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [debugInfo, setDebugInfo] = useState<string>('');
 
+    // Use dashboard proxy for remote streams, direct URL for local
     const src = streamUrl ?? '/rover/stream';
     const canTryStream = streamUrl ? true : isOnline;
 
@@ -23,87 +24,53 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
             return;
         }
 
-        const controller = new AbortController();
-        const headers: Record<string, string> = {
-            'Accept': 'image/jpeg',
-        };
+        const img = imgRef.current;
 
-        if (src.includes('ngrok')) {
-            headers['ngrok-skip-browser-warning'] = 'true';
+        if (!img) {
+            return;
         }
 
-        let buffer = new Uint8Array(0);
+        const controller = new AbortController();
 
-        async function run() {
+        async function loadStream() {
             try {
-                const res = await fetch(src, {
-                    signal: controller.signal,
-                    headers,
-                    mode: 'cors',
-                });
+                setLoading(true);
+                setErrorMessage('');
+                setDebugInfo('');
 
-                if (!res.ok || !res.body) {
+                // For MJPEG streams, we need to use img src directly
+                // For remote streams (ngrok), use dashboard proxy
+                const imageUrl = src.includes('ngrok') ? '/rover/stream' : src;
+
+                if (!img) {
+                    return;
+                }
+
+                img.src = imageUrl + `?t=${key}`;
+
+                img.onload = () => {
+                    setLoading(false);
+                    setHasError(false);
+                };
+
+                img.onerror = () => {
+                    setErrorMessage('Failed to load stream frame');
+                    setDebugInfo('Check: 1) Stream URL correct 2) Server running 3) Network accessible');
                     setHasError(true);
-                    return;
-                }
+                    setLoading(false);
+                };
 
-                const reader = res.body.getReader();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-
-                    if (done) {
-                        break;
+                // For continuous streaming, reload the image periodically
+                const interval = setInterval(() => {
+                    if (!controller.signal.aborted && img) {
+                        img.src = imageUrl + `?t=${Date.now()}`;
                     }
+                }, 1000); // Refresh every second
 
-                    const merged = new Uint8Array(buffer.length + value.length);
-
-                    merged.set(buffer);
-                    merged.set(value, buffer.length);
-                    buffer = merged;
-
-                    let start = -1;
-
-                    for (let i = 0; i < buffer.length - 1; i++) {
-                        if (buffer[i] === 0xff && buffer[i + 1] === 0xd8) {
-                            start = i;
-                        }
-
-                        if (start !== -1 && buffer[i] === 0xff && buffer[i + 1] === 0xd9) {
-                            const jpeg = buffer.slice(start, i + 2);
-
-                            buffer = buffer.slice(i + 2);
-
-                            const blob = new Blob([jpeg], { type: 'image/jpeg' });
-                            const url = URL.createObjectURL(blob);
-                            const img = new Image();
-
-                            img.onload = () => {
-                                setLoading(false);
-
-                                const canvas = canvasRef.current;
-
-                                if (canvas) {
-                                    canvas.width = img.naturalWidth;
-                                    canvas.height = img.naturalHeight;
-                                    canvas.getContext('2d')?.drawImage(img, 0, 0);
-                                }
-
-                                URL.revokeObjectURL(url);
-                            };
-
-                            img.src = url;
-                            start = -1;
-
-                            break;
-                        }
-                    }
-                }
+                return () => {
+                    clearInterval(interval);
+                };
             } catch (e: unknown) {
-                if (e instanceof DOMException && e.name === 'AbortError') {
-                    return;
-                }
-
                 const errorMsg = e instanceof Error ? e.message : 'Unknown error';
                 setErrorMessage(errorMsg);
                 setDebugInfo(`Check: 1) Pi camera server running 2) Stream URL correct 3) Network accessible. Error: ${errorMsg}`);
@@ -112,9 +79,12 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
             }
         }
 
-        run();
+        const cleanup = loadStream();
 
-        return () => controller.abort();
+        return () => {
+            cleanup?.then((fn) => fn?.());
+            controller.abort();
+        };
     }, [src, canTryStream, hasError, key]);
 
     function reconnect() {
@@ -151,7 +121,11 @@ export function CameraFeed({ isOnline, streamUrl }: CameraFeedProps) {
 
     return (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-border/40 bg-black">
-            <canvas ref={canvasRef} className="h-full w-full object-contain" />
+            <img
+                ref={imgRef}
+                className="h-full w-full object-contain"
+                alt="Camera feed"
+            />
             {loading && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <div className="size-5 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
