@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../../wayfinder'
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 export const proxy = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ proxy.definition = {
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 proxy.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ proxy.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 proxy.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ proxy.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 proxy.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ proxy.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 const proxyForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -55,7 +55,7 @@ const proxyForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => (
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 proxyForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -65,7 +65,7 @@ proxyForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::proxy
-* @see app/Http/Controllers/StreamController.php:10
+* @see app/Http/Controllers/StreamController.php:13
 * @route '/rover/stream'
 */
 proxyForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

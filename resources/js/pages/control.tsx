@@ -173,7 +173,7 @@ export default function Control({
                 <div className="grid gap-4 lg:grid-cols-5">
                     {/* Left Column - Camera + Command Log */}
                     <div className="space-y-4 lg:col-span-3">
-                        <CameraFeed isOnline={roverStatus.is_online} />
+                        <CameraFeed isOnline={roverStatus.is_online} streamUrl={rover.stream_url} />
 
                         <Card>
                             <CardHeader className="pb-2">

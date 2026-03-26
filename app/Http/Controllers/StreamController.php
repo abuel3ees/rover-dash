@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StreamController extends Controller
@@ -16,30 +19,43 @@ class StreamController extends Controller
 
         $streamUrl = $rover->stream_url;
 
-        return new StreamedResponse(function () use ($streamUrl) {
-            $stream = @fopen($streamUrl, 'r');
+        set_time_limit(0);
 
-            if (! $stream) {
-                echo '--boundary--';
+        $client = new Client(['verify' => false]);
 
-                return;
+        try {
+            $upstream = $client->get($streamUrl, [
+                'headers' => [
+                    'ngrok-skip-browser-warning' => 'true',
+                    'User-Agent' => 'RoverDashboard/1.0',
+                ],
+                'stream' => true,
+                'connect_timeout' => 10,
+                'timeout' => 0,
+            ]);
+        } catch (GuzzleException $e) {
+            Log::error('Stream proxy failed', ['url' => $streamUrl, 'error' => $e->getMessage()]);
+            abort(502, $e->getMessage());
+        }
+
+        $body = $upstream->getBody();
+        $contentType = $upstream->getHeaderLine('Content-Type') ?: 'multipart/x-mixed-replace; boundary=frame';
+
+        return new StreamedResponse(function () use ($body) {
+            // Disable all output buffering so frames reach the browser immediately
+            while (ob_get_level() > 0) {
+                ob_end_flush();
             }
 
-            while (! feof($stream) && ! connection_aborted()) {
-                $chunk = fread($stream, 8192);
-                if ($chunk === false) {
-                    break;
-                }
-                echo $chunk;
+            while (! $body->eof() && ! connection_aborted()) {
+                echo $body->read(8192);
+                ob_flush();
                 flush();
             }
-
-            fclose($stream);
         }, 200, [
-            'Content-Type' => 'multipart/x-mixed-replace; boundary=--boundary',
+            'Content-Type' => $contentType,
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
-            'Pragma' => 'no-cache',
-            'Expires' => '0',
+            'X-Accel-Buffering' => 'no',
         ]);
     }
 }
