@@ -1,4 +1,4 @@
-import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
+import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition, applyUrlDefaults } from './../../wayfinder'
 import token from './token'
 import stream9fa923 from './stream'
 /**
@@ -432,6 +432,105 @@ streamForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => (
 
 stream.form = streamForm
 
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+export const hls = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: hls.url(args, options),
+    method: 'get',
+})
+
+hls.definition = {
+    methods: ["get","head"],
+    url: '/rover/hls/{filename}',
+} satisfies RouteDefinition<["get","head"]>
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+hls.url = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions) => {
+    if (typeof args === 'string' || typeof args === 'number') {
+        args = { filename: args }
+    }
+
+    if (Array.isArray(args)) {
+        args = {
+            filename: args[0],
+        }
+    }
+
+    args = applyUrlDefaults(args)
+
+    const parsedArgs = {
+        filename: args.filename,
+    }
+
+    return hls.definition.url
+            .replace('{filename}', parsedArgs.filename.toString())
+            .replace(/\/+$/, '') + queryParams(options)
+}
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+hls.get = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'get'> => ({
+    url: hls.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+hls.head = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteDefinition<'head'> => ({
+    url: hls.url(args, options),
+    method: 'head',
+})
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+const hlsForm = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: hls.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+hlsForm.get = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: hls.url(args, options),
+    method: 'get',
+})
+
+/**
+* @see \App\Http\Controllers\Api\HlsController::hls
+* @see app/Http/Controllers/Api/HlsController.php:55
+* @route '/rover/hls/{filename}'
+*/
+hlsForm.head = (args: { filename: string | number } | [filename: string | number ] | string | number, options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
+    action: hls.url(args, {
+        [options?.mergeQuery ? 'mergeQuery' : 'query']: {
+            _method: 'HEAD',
+            ...(options?.query ?? options?.mergeQuery ?? {}),
+        }
+    }),
+    method: 'get',
+})
+
+hls.form = hlsForm
+
 const rover = {
     create: Object.assign(create, create),
     store: Object.assign(store, store),
@@ -440,6 +539,7 @@ const rover = {
     destroy: Object.assign(destroy, destroy),
     token: Object.assign(token, token),
     stream: Object.assign(stream, stream9fa923),
+    hls: Object.assign(hls, hls),
 }
 
 export default rover

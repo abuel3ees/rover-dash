@@ -4,6 +4,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ControlController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Api\HlsController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessagePinController;
 use App\Http\Controllers\MessageReactionController;
@@ -49,6 +50,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Camera stream proxy
     Route::get('rover/stream', [StreamController::class, 'proxy'])->name('rover.stream');
     Route::get('rover/stream/health', [StreamController::class, 'health'])->name('rover.stream.health');
+    Route::get('rover/hls/{filename}', [HlsController::class, 'show'])
+        ->where('filename', '[A-Za-z0-9._-]+')
+        ->name('rover.hls');
 
     // Chat (legacy ephemeral channels)
     Route::get('chat', [ChatController::class, 'index'])->name('chat');

@@ -37,6 +37,7 @@ import math
 import os
 import subprocess
 import socket
+import shutil
 import threading
 import time
 from datetime import datetime, timezone
@@ -112,6 +113,7 @@ MANUAL_STOP_HOLD_SECONDS = config_float("MANUAL_STOP_HOLD_SECONDS", 0.25)
 
 STREAM_URL = config_value("STREAM_URL", "").strip()
 STREAM_ENABLED = config_bool("STREAM_ENABLED", "true")
+STREAM_MODE = config_value("STREAM_MODE", "relay").strip().lower()
 STREAM_PUBLIC_URL = config_value("STREAM_PUBLIC_URL", "").strip()
 ROVER_IP = config_value("ROVER_IP", config_value("PI_IP", "")).strip()
 STREAM_PORT = config_value("STREAM_PORT", "8081").strip()
@@ -267,9 +269,26 @@ STREAM_FRAME_HEIGHT = config_int("STREAM_FRAME_HEIGHT", 0)
 STREAM_RESEND_STALE_FRAMES = config_bool("STREAM_RESEND_STALE_FRAMES", "true")
 STREAM_FAILURE_BACKOFF = config_float("STREAM_FAILURE_BACKOFF", 0.25)
 
+HLS_OUTPUT_DIR = Path(config_value("HLS_OUTPUT_DIR", "/tmp/rover-hls"))
+HLS_PLAYLIST_NAME = config_value("HLS_PLAYLIST_NAME", "stream.m3u8")
+HLS_PUBLIC_URL = config_value("HLS_PUBLIC_URL", "").strip()
+HLS_FPS = config_float("HLS_FPS", 24)
+HLS_SEGMENT_SECONDS = config_float("HLS_SEGMENT_SECONDS", 1.0)
+HLS_LIST_SIZE = config_int("HLS_LIST_SIZE", 6)
+HLS_BITRATE = config_value("HLS_BITRATE", "2200k")
+HLS_ENCODER = config_value("HLS_ENCODER", "libx264")
+HLS_UPLOAD_POLL_INTERVAL = config_float("HLS_UPLOAD_POLL_INTERVAL", 0.15)
+
 # Runtime performance stats
 loop_fps_ewma = 0.0
 last_loop_time = 0.0
+
+# HLS stream state
+latest_hls_frame_lock = threading.Lock()
+latest_hls_frame = None
+latest_hls_frame_seq = 0
+last_hls_frame_time = 0.0
+hls_upload_state: Dict[str, Tuple[float, int]] = {}
 
 # ---------------- MODELS ----------------
 cv2.setUseOptimized(True)
@@ -332,12 +351,13 @@ last_print_time = 0.0
 def load_dashboard_config():
     """Load dashboard config from ~/rover/rover-pi-client/.env."""
     global DASHBOARD_URL, API_TOKEN, ROVER_ID
-    global STREAM_URL, STREAM_ENABLED, STREAM_PUBLIC_URL, PUBLIC_STREAM_URL, ROVER_IP, STREAM_PORT
+    global STREAM_URL, STREAM_ENABLED, STREAM_MODE, STREAM_PUBLIC_URL, PUBLIC_STREAM_URL, ROVER_IP, STREAM_PORT
 
     DASHBOARD_URL = config_value("DASHBOARD_URL", DASHBOARD_URL).rstrip("/")
     API_TOKEN = config_value("API_TOKEN", config_value("ROVER_TOKEN", API_TOKEN))
     ROVER_ID = config_value("ROVER_ID", ROVER_ID)
     STREAM_URL = config_value("STREAM_URL", STREAM_URL).strip()
+    STREAM_MODE = config_value("STREAM_MODE", STREAM_MODE).strip().lower()
     STREAM_PUBLIC_URL = config_value("STREAM_PUBLIC_URL", STREAM_PUBLIC_URL).strip()
     PUBLIC_STREAM_URL = STREAM_PUBLIC_URL
     ROVER_IP = config_value("ROVER_IP", config_value("PI_IP", ROVER_IP)).strip()
@@ -349,14 +369,26 @@ def load_dashboard_config():
     else:
         print("[DASHBOARD] Missing DASHBOARD_URL/API_TOKEN/ROVER_ID; manual dashboard control disabled.")
 
-    if STREAM_ENABLED:
-        print(f"[STREAM] Frames will be pushed to {DASHBOARD_URL}/api/rover/frame")
+    if hls_stream_enabled():
+        print(f"[STREAM] HLS upload mode enabled: {HLS_PUBLIC_URL or dashboard_public_url('/rover/hls/' + HLS_PLAYLIST_NAME)}")
+    elif frame_relay_enabled():
+        print(f"[STREAM] Dashboard frame relay enabled: {DASHBOARD_URL}/api/rover/frame")
+    elif STREAM_MODE == "direct":
+        print(f"[STREAM] Direct stream mode enabled: {derive_public_stream_url() or '(missing STREAM_URL)'}")
     else:
-        print("[STREAM] STREAM_ENABLED=false; frame publishing disabled.")
+        print("[STREAM] Stream publishing disabled.")
 
 
 def dashboard_configured():
     return bool(DASHBOARD_URL and API_TOKEN and ROVER_ID)
+
+
+def frame_relay_enabled() -> bool:
+    return STREAM_ENABLED and STREAM_MODE not in ("direct", "hls", "off", "false", "none")
+
+
+def hls_stream_enabled() -> bool:
+    return STREAM_ENABLED and STREAM_MODE == "hls"
 
 
 def dashboard_api_url(path: str) -> str:
@@ -364,6 +396,13 @@ def dashboard_api_url(path: str) -> str:
     if base.endswith("/api"):
         return f"{base}{path}"
     return f"{base}/api{path}"
+
+
+def dashboard_public_url(path: str) -> str:
+    base = DASHBOARD_URL.rstrip("/")
+    if base.endswith("/api"):
+        base = base[:-4]
+    return f"{base}{path}"
 
 
 def dashboard_headers(content_type=False):
@@ -1263,6 +1302,7 @@ class LatestFrameCamera:
                     self.seq += 1
                     self.fail_count = 0
                 update_latest_frame(frame)
+                update_latest_hls_frame(frame)
             else:
                 with self.lock:
                     self.fail_count += 1
@@ -1360,7 +1400,7 @@ def update_latest_frame(frame):
     """Store a lightweight frame snapshot for the publisher thread."""
     global latest_stream_frame, latest_stream_frame_seq, last_stream_frame_capture_time
 
-    if not (STREAM_ENABLED and dashboard_configured()):
+    if not (frame_relay_enabled() and dashboard_configured()):
         return
 
     now = time.time()
@@ -1414,7 +1454,7 @@ def stream_publish_loop():
     last_published_seq = -1
 
     while not shutdown_event.is_set():
-        if not (STREAM_ENABLED and dashboard_configured()):
+        if not (frame_relay_enabled() and dashboard_configured()):
             shutdown_event.wait(2.0)
             continue
 
@@ -1492,8 +1532,8 @@ def stream_publish_loop():
 
 
 def start_stream_publisher():
-    if not STREAM_ENABLED:
-        print("[STREAM] Stream publishing disabled (STREAM_ENABLED=false).")
+    if not frame_relay_enabled():
+        print("[STREAM] Dashboard frame relay publisher disabled.")
         return
 
     threading.Thread(target=stream_publish_loop, daemon=True).start()
@@ -1501,6 +1541,239 @@ def start_stream_publisher():
         print(f"[STREAM] Frame publisher started (target ~{STREAM_PUBLISH_FPS:.0f} fps to dashboard).")
     else:
         print("[STREAM] Frame publisher started (uncapped best-effort to dashboard).")
+
+
+# ---------------- HLS VIDEO STREAM ----------------
+
+def update_latest_hls_frame(frame):
+    """Store the latest camera frame for the FFmpeg HLS encoder."""
+    global latest_hls_frame, latest_hls_frame_seq, last_hls_frame_time
+
+    if not hls_stream_enabled():
+        return
+
+    now = time.time()
+    if HLS_FPS > 0:
+        min_interval = 1.0 / HLS_FPS
+        if (now - last_hls_frame_time) < min_interval:
+            return
+
+    last_hls_frame_time = now
+    with latest_hls_frame_lock:
+        latest_hls_frame = frame.copy()
+        latest_hls_frame_seq += 1
+
+
+def get_latest_hls_frame(timeout: float = 5.0):
+    deadline = time.time() + timeout
+
+    while not shutdown_event.is_set():
+        with latest_hls_frame_lock:
+            if latest_hls_frame is not None:
+                return latest_hls_frame.copy()
+
+        if time.time() >= deadline:
+            return None
+
+        shutdown_event.wait(0.02)
+
+
+def build_hls_ffmpeg_command(width: int, height: int) -> list[str]:
+    fps = max(1, int(HLS_FPS))
+    segment_seconds = max(0.5, HLS_SEGMENT_SECONDS)
+    gop = max(1, int(fps * segment_seconds))
+    playlist_path = str(HLS_OUTPUT_DIR / HLS_PLAYLIST_NAME)
+    segment_path = str(HLS_OUTPUT_DIR / "segment_%06d.ts")
+
+    return [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "warning",
+        "-f",
+        "rawvideo",
+        "-pix_fmt",
+        "bgr24",
+        "-s",
+        f"{width}x{height}",
+        "-r",
+        str(fps),
+        "-i",
+        "pipe:0",
+        "-an",
+        "-c:v",
+        HLS_ENCODER,
+        "-preset",
+        "ultrafast",
+        "-tune",
+        "zerolatency",
+        "-pix_fmt",
+        "yuv420p",
+        "-b:v",
+        HLS_BITRATE,
+        "-maxrate",
+        HLS_BITRATE,
+        "-bufsize",
+        HLS_BITRATE,
+        "-g",
+        str(gop),
+        "-keyint_min",
+        str(gop),
+        "-sc_threshold",
+        "0",
+        "-f",
+        "hls",
+        "-hls_time",
+        str(segment_seconds),
+        "-hls_list_size",
+        str(max(3, HLS_LIST_SIZE)),
+        "-hls_flags",
+        "delete_segments+omit_endlist+independent_segments",
+        "-hls_segment_filename",
+        segment_path,
+        playlist_path,
+    ]
+
+
+def hls_encode_loop():
+    if not hls_stream_enabled():
+        return
+
+    if shutil.which("ffmpeg") is None:
+        print("[HLS] ffmpeg not found; HLS streaming disabled.")
+        return
+
+    first_frame = get_latest_hls_frame()
+    if first_frame is None:
+        print("[HLS] No camera frame available for HLS encoder.")
+        return
+
+    HLS_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    for stale_file in HLS_OUTPUT_DIR.glob("*"):
+        if stale_file.is_file():
+            try:
+                stale_file.unlink()
+            except Exception:
+                pass
+
+    height, width = first_frame.shape[:2]
+    cmd = build_hls_ffmpeg_command(width, height)
+
+    try:
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    except Exception as e:
+        print(f"[HLS] Failed to start ffmpeg: {e}")
+        return
+
+    print(f"[HLS] Encoder started ({width}x{height} @ ~{max(1, int(HLS_FPS))} fps, {HLS_BITRATE}).")
+    frame_interval = 1.0 / max(1.0, HLS_FPS)
+    next_frame_at = time.time()
+
+    while not shutdown_event.is_set() and process.poll() is None:
+        frame = get_latest_hls_frame(timeout=1.0)
+        if frame is None:
+            continue
+
+        if frame.shape[1] != width or frame.shape[0] != height:
+            frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+
+        try:
+            process.stdin.write(frame.tobytes())
+        except Exception as e:
+            print(f"[HLS] ffmpeg stdin error: {e}")
+            break
+
+        next_frame_at += frame_interval
+        delay = max(0.0, next_frame_at - time.time())
+        if delay > 0:
+            shutdown_event.wait(delay)
+        elif delay < -1.0:
+            next_frame_at = time.time()
+
+    try:
+        if process.stdin:
+            process.stdin.close()
+    except Exception:
+        pass
+
+    try:
+        process.terminate()
+    except Exception:
+        pass
+
+    print("[HLS] Encoder stopped.")
+
+
+def upload_hls_file(path: Path) -> bool:
+    try:
+        data = path.read_bytes()
+    except Exception:
+        return False
+
+    try:
+        response = stream_session.post(
+            dashboard_api_url(f"/rover/hls/{path.name}"),
+            data=data,
+            headers={
+                "Authorization": f"Bearer {API_TOKEN}",
+                "X-Rover-Id": ROVER_ID,
+                "Content-Type": "application/vnd.apple.mpegurl" if path.suffix == ".m3u8" else "video/mp2t",
+                "Accept": "application/json",
+                "Connection": "keep-alive",
+            },
+            timeout=(STREAM_CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
+        )
+        return response.status_code in (200, 201, 204)
+    except Exception as e:
+        print(f"[HLS] Upload error for {path.name}: {e}")
+        return False
+
+
+def hls_upload_loop():
+    if not (hls_stream_enabled() and dashboard_configured()):
+        return
+
+    last_logged = 0.0
+
+    while not shutdown_event.is_set():
+        files = sorted(
+            [path for path in HLS_OUTPUT_DIR.glob("*") if path.suffix in (".ts", ".m3u8", ".m4s", ".mp4")],
+            key=lambda path: (path.suffix == ".m3u8", path.name),
+        )
+
+        uploaded = 0
+        for path in files:
+            try:
+                stat = path.stat()
+            except Exception:
+                continue
+
+            marker = (stat.st_mtime, stat.st_size)
+            if hls_upload_state.get(path.name) == marker:
+                continue
+
+            if upload_hls_file(path):
+                hls_upload_state[path.name] = marker
+                uploaded += 1
+
+        if uploaded and time.time() - last_logged > 10:
+            print(f"[HLS] Uploaded {uploaded} changed HLS file(s) to dashboard.")
+            last_logged = time.time()
+
+        shutdown_event.wait(HLS_UPLOAD_POLL_INTERVAL)
+
+
+def start_hls_publisher():
+    if not hls_stream_enabled():
+        return
+
+    if not dashboard_configured():
+        print("[HLS] Dashboard not configured; HLS publisher disabled.")
+        return
+
+    threading.Thread(target=hls_encode_loop, daemon=True).start()
+    threading.Thread(target=hls_upload_loop, daemon=True).start()
+    print("[HLS] HLS encoder/uploader threads started.")
 
 
 # ---------------- STARTUP ----------------
@@ -1513,18 +1786,25 @@ if CAMERA_THREADED:
     camera_reader.start()
 send_indicator("FREE")
 start_stream_publisher()
+start_hls_publisher()
 
 local_ip = get_local_ip()
 if local_ip:
     ROVER_IP = local_ip
 
-# The dashboard pulls frames from its own relay cache, not from the Pi directly.
-# A non-empty stream_url just signals "streaming active" to the frontend.
-relay_marker = "relay://dashboard" if STREAM_ENABLED else ""
+direct_stream_url = derive_public_stream_url() if STREAM_MODE == "direct" else None
+hls_stream_url = (
+    HLS_PUBLIC_URL or dashboard_public_url(f"/rover/hls/{HLS_PLAYLIST_NAME}")
+) if hls_stream_enabled() else None
+dashboard_stream_url = (
+    direct_stream_url
+    or hls_stream_url
+    or ("relay://dashboard" if frame_relay_enabled() else "")
+)
 
-if dashboard_configured() and relay_marker:
+if dashboard_configured() and dashboard_stream_url:
     update_rover_network_info(
-        relay_marker,
+        dashboard_stream_url,
         local_ip or ROVER_IP or "",
         int(STREAM_PORT or "8081"),
     )
@@ -1566,6 +1846,7 @@ try:
         last_loop_time = now
         if camera_reader is None:
             update_latest_frame(frame)
+            update_latest_hls_frame(frame)
 
         if apply_manual_override(now):
             update_indicator_state(now)

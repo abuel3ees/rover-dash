@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CommandController;
 use App\Http\Controllers\Api\FrameController;
+use App\Http\Controllers\Api\HlsController;
 use App\Http\Controllers\Api\RoverStatusController;
 use App\Http\Controllers\Api\RoverSettingsController;
 use App\Http\Controllers\Api\TelemetryController;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 
     // Camera frame relay (Pi pushes JPEG bytes; dashboard serves them via /rover/stream)
     Route::post('rover/frame', [FrameController::class, 'store']);
+    Route::post('rover/hls/{filename}', [HlsController::class, 'store'])
+        ->where('filename', '[A-Za-z0-9._-]+');
 
     // 2. Telemetry
     Route::post('telemetry', [TelemetryController::class, 'store']);
