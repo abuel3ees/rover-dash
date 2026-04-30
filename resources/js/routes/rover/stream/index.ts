@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../../wayfinder'
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 export const health = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -16,7 +16,7 @@ health.definition = {
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 health.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ health.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 health.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -35,7 +35,7 @@ health.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 health.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -45,7 +45,7 @@ health.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 const healthForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -55,7 +55,7 @@ const healthForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => 
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 healthForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -65,7 +65,7 @@ healthForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::health
-* @see app/Http/Controllers/StreamController.php:14
+* @see app/Http/Controllers/StreamController.php:17
 * @route '/rover/stream/health'
 */
 healthForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -16,7 +16,7 @@ echo "📁 Configuration Check:"
 if [ -f ~/rover/rover-pi-client/.env ]; then
     echo "✓ .env file found"
     echo "  Variables set:"
-    grep -E "^(DASHBOARD_URL|ROVER_ID|YOUTUBE_STREAM_KEY)" ~/rover/rover-pi-client/.env | sed 's/=.*/=***/' || echo "  (none set)"
+    grep -E "^(DASHBOARD_URL|ROVER_ID|STREAM_URL|STREAM_DESTINATION|YOUTUBE_STREAM_URL)" ~/rover/rover-pi-client/.env | sed 's/=.*/=***/' || echo "  (none set)"
 else
     echo "❌ .env file NOT found at ~/rover/rover-pi-client/.env"
 fi

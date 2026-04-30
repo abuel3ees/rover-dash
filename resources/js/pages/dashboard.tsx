@@ -71,6 +71,10 @@ interface DashboardProps {
     temperatureHistory: number[];
 }
 
+const resolveBrowserStreamUrl = (rover: Rover | null): string | null => {
+    return rover?.stream_url?.trim() || null;
+};
+
 export default function Dashboard({
     rover,
     latestTelemetry,
@@ -85,6 +89,7 @@ export default function Dashboard({
     const [commands, setCommands] = useState(recentCommands ?? []);
     const [batteryHistory, setBatteryHistory] = useState(initialBatteryHistory);
     const [tempHistory, setTempHistory] = useState(initialTempHistory);
+    const browserStreamUrl = resolveBrowserStreamUrl(currentRover);
 
     const onTelemetry = useCallback(
         (data: TelemetryPayload) => {
@@ -442,7 +447,7 @@ export default function Dashboard({
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 text-muted-foreground/60">
                                     {metric.icon}
-                                    <span className="text-[11px] font-medium tracking-[0.1em] uppercase">
+                                    <span className="text-[11px] font-medium tracking-widest uppercase">
                                         {metric.label}
                                     </span>
                                 </div>
@@ -572,7 +577,7 @@ export default function Dashboard({
                             <div className="overflow-hidden border border-border/40 bg-card/60">
                                 <CameraFeed
                                     isOnline={isOnline}
-                                    streamUrl={currentRover.stream_url}
+                                    streamUrl={browserStreamUrl}
                                 />
                                 <Link
                                     href="/control"
@@ -592,7 +597,7 @@ export default function Dashboard({
                                     </span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
-                                <div className="max-h-[280px] overflow-y-auto border border-border/40 bg-card/60 p-4">
+                                <div className="max-h-70 overflow-y-auto border border-border/40 bg-card/60 p-4">
                                     <ActivityFeed
                                         commands={commands}
                                         telemetry={recentTelemetry ?? []}

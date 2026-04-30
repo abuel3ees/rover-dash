@@ -47,6 +47,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 type ControlMode = 'automatic' | 'manual';
 type RotationDirection = 'clockwise' | 'counterclockwise';
 
+const resolveBrowserStreamUrl = (rover: Rover): string | null => {
+    return rover.stream_url?.trim() || null;
+};
+
 export default function Control({
     rover,
     latestTelemetry,
@@ -72,6 +76,7 @@ export default function Control({
             : 'automatic',
     );
     const speedRef = useRef(50);
+    const browserStreamUrl = resolveBrowserStreamUrl(rover);
 
     const handleTelemetry = useCallback((data: TelemetryPayload) => {
         setTelemetry((prev) => ({
@@ -245,7 +250,7 @@ export default function Control({
                     <div className="space-y-4 lg:col-span-3">
                         <CameraFeed
                             isOnline={roverStatus.is_online}
-                            streamUrl={rover.stream_url}
+                            streamUrl={browserStreamUrl}
                         />
 
                         <Card>

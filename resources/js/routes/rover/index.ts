@@ -353,7 +353,7 @@ destroy.form = destroyForm
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 export const stream = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -368,7 +368,7 @@ stream.definition = {
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 stream.url = (options?: RouteQueryOptions) => {
@@ -377,7 +377,7 @@ stream.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 stream.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
@@ -387,7 +387,7 @@ stream.get = (options?: RouteQueryOptions): RouteDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 stream.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
@@ -397,7 +397,7 @@ stream.head = (options?: RouteQueryOptions): RouteDefinition<'head'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 const streamForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -407,7 +407,7 @@ const streamForm = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => 
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 streamForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
@@ -417,7 +417,7 @@ streamForm.get = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({
 
 /**
 * @see \App\Http\Controllers\StreamController::stream
-* @see app/Http/Controllers/StreamController.php:58
+* @see app/Http/Controllers/StreamController.php:41
 * @route '/rover/stream'
 */
 streamForm.head = (options?: RouteQueryOptions): RouteFormDefinition<'get'> => ({

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Camera Server - Streams video from Raspberry Pi Camera to YouTube Live
+Camera Server - Streams video from Raspberry Pi Camera to a local MediaMTX server.
 Place this in /home/hamzamira/rover/rover-pi-client/camera_server.py
 Run with: python3 camera_server.py
 
-This streams directly to YouTube Live, then you embed the stream in the dashboard.
+This publishes to a local RTSP endpoint that your dashboard or browser player can consume.
 """
 
 import cv2
@@ -22,8 +22,7 @@ logging.getLogger('werkzeug').setLevel(logging.ERROR)
 app = Flask(__name__)
 
 # Configuration
-YOUTUBE_STREAM_KEY = os.getenv('YOUTUBE_STREAM_KEY', os.getenv('YOUTUBE_LIVE_STREAM_KEY', ''))
-YOUTUBE_RTMP_URL = os.getenv('YOUTUBE_RTMP_URL', 'rtmps://a.rtmp.youtube.com/live2')
+STREAM_DESTINATION = os.getenv('STREAM_DESTINATION', os.getenv('STREAM_URL', 'rtsp://localhost:8554/cam'))
 
 # Initialize camera
 try:
@@ -42,16 +41,12 @@ except Exception as e:
 ffmpeg_process = None
 
 
-def start_youtube_stream():
-    """Start streaming to YouTube Live via FFmpeg"""
+def start_local_stream():
+    """Start streaming to the local MediaMTX server via FFmpeg"""
     global ffmpeg_process
     
-    if not YOUTUBE_STREAM_KEY:
-        print("⚠️  YOUTUBE_STREAM_KEY not set in environment")
-        return False
-    
     try:
-        # FFmpeg command to stream video from camera to YouTube
+        # FFmpeg command to stream video from camera to local RTSP
         cmd = [
             'ffmpeg',
             '-loglevel', 'error',  # Only show errors
@@ -67,13 +62,12 @@ def start_youtube_stream():
             '-bufsize', '5000k',
             '-x264opts', 'nal-hrd=cbr:force-cfr=1',
             '-g', '60',  # GOP size
-            '-f', 'flv',
-            '-flvflags', 'no_duration_filesize',
-            f'{YOUTUBE_RTMP_URL}/{YOUTUBE_STREAM_KEY}'
+            '-rtsp_transport', 'tcp',
+            '-f', 'rtsp',
+            STREAM_DESTINATION,
         ]
         
-        print(f"🔄 Connecting to YouTube RTMP: {YOUTUBE_RTMP_URL}")
-        print(f"🔑 Stream Key: {YOUTUBE_STREAM_KEY[:10]}...")
+        print(f"🔄 Connecting to local stream destination: {STREAM_DESTINATION}")
         
         ffmpeg_process = subprocess.Popen(
             cmd,
@@ -83,7 +77,7 @@ def start_youtube_stream():
             bufsize=10 ** 6
         )
         print(f"✓ FFmpeg process started (PID: {ffmpeg_process.pid})")
-        print(f"✓ Streaming to YouTube Live...")
+        print("✓ Streaming to local MediaMTX server...")
         return True
     except Exception as e:
         print(f"❌ Failed to start FFmpeg: {e}")
@@ -92,8 +86,8 @@ def start_youtube_stream():
         return False
 
 
-def stream_to_youtube():
-    """Continuously stream frames to YouTube via FFmpeg"""
+def stream_to_local_stream():
+    """Continuously stream frames to the local server via FFmpeg"""
     global ffmpeg_process
     
     if not ffmpeg_process:
@@ -130,7 +124,7 @@ def stream_to_youtube():
             
             frame_count += 1
             if frame_count % 300 == 0:  # Print every 10 seconds at 30fps
-                print(f"✓ {frame_count} frames sent to YouTube")
+                print(f"✓ {frame_count} frames sent to local stream")
                 
         except KeyboardInterrupt:
             print("⏸️  Interrupted by user")
@@ -159,51 +153,45 @@ def health():
     return jsonify({
         'status': 'ok',
         'service': 'camera-server',
-        'streaming_to_youtube': ffmpeg_process is not None and ffmpeg_process.poll() is None
+        'streaming_to_local_server': ffmpeg_process is not None and ffmpeg_process.poll() is None
     }), 200
 
 
-@app.route('/youtube-status')
-def youtube_status():
-    """Get YouTube streaming status"""
+@app.route('/stream-status')
+def stream_status():
+    """Get local streaming status"""
     is_streaming = ffmpeg_process is not None and ffmpeg_process.poll() is None
     return jsonify({
         'streaming': is_streaming,
-        'has_stream_key': bool(YOUTUBE_STREAM_KEY),
-        'platform': 'YouTube',
-        'message': 'Streaming to YouTube Live' if is_streaming else 'Not streaming'
+        'destination': STREAM_DESTINATION,
+        'platform': 'Local RTSP',
+        'message': 'Streaming to local MediaMTX' if is_streaming else 'Not streaming'
     }), 200
 
 
 if __name__ == "__main__":
     print("=" * 70)
-    print("  Camera Server - YouTube Live Streaming")
+    print("  Camera Server - Local RTSP Streaming")
     print("=" * 70)
     print("")
     
-    if not YOUTUBE_STREAM_KEY:
-        print("⚠️  YOUTUBE_STREAM_KEY not set in environment")
-        print("   Camera server will start but NOT stream to YouTube")
-        print("   To enable: add YOUTUBE_STREAM_KEY to .env file")
-        print("")
-    else:
-        print(f"✓ YOUTUBE_STREAM_KEY found (first 10 chars: {YOUTUBE_STREAM_KEY[:10]}...)")
-        print("")
-    
-    # Start YouTube streaming in background thread (only if key is set)
-    if YOUTUBE_STREAM_KEY and start_youtube_stream():
-        stream_thread = threading.Thread(target=stream_to_youtube, daemon=True)
+    print(f"✓ Stream destination: {STREAM_DESTINATION}")
+    print("")
+
+    # Start local streaming in background thread
+    if start_local_stream():
+        stream_thread = threading.Thread(target=stream_to_local_stream, daemon=True)
         stream_thread.start()
         print("✓ Streaming thread started")
         print("")
-    elif YOUTUBE_STREAM_KEY:
-        print("❌ Failed to start streaming to YouTube")
+    else:
+        print("❌ Failed to start local streaming")
         print("")
     
     try:
         print("Starting Flask server on http://0.0.0.0:5000")
         print("Health check: http://0.0.0.0:5000/health")
-        print("YouTube status: http://0.0.0.0:5000/youtube-status")
+        print("Stream status: http://0.0.0.0:5000/stream-status")
         print("")
         app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
     except KeyboardInterrupt:

@@ -138,7 +138,7 @@ export default function RoverSettings({
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
-                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                                 <InputError message={errors.description} />
                             </div>
@@ -183,7 +183,7 @@ export default function RoverSettings({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="stream_url">
-                                    YouTube Stream URL
+                                    Stream URL
                                 </Label>
                                 <Input
                                     id="stream_url"
@@ -191,11 +191,10 @@ export default function RoverSettings({
                                     onChange={(e) =>
                                         setData('stream_url', e.target.value)
                                     }
-                                    placeholder="https://www.youtube.com/watch?v=..."
+                                    placeholder="http://192.168.1.100:8889/cam/"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Enter the YouTube Live watch URL or your
-                                    channel URL.
+                                    Enter the local WebRTC, HLS, or dashboard stream URL.
                                 </p>
                                 <InputError message={errors.stream_url} />
                             </div>

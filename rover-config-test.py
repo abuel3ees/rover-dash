@@ -47,7 +47,8 @@ print("")
 
 # Check required vars
 print("🔑 Step 3: Check required variables")
-required = ['DASHBOARD_URL', 'API_TOKEN', 'ROVER_ID', 'YOUTUBE_STREAM_KEY']
+required = ['DASHBOARD_URL', 'API_TOKEN', 'ROVER_ID']
+stream_vars = ['STREAM_URL', 'STREAM_DESTINATION', 'YOUTUBE_STREAM_URL']
 missing = []
 
 for var in required:
@@ -58,10 +59,17 @@ for var in required:
         print(f"⚠️  {var}: NOT SET")
         missing.append(var)
 
+stream_value = next((config[var] for var in stream_vars if config.get(var)), '')
+if stream_value:
+    status = f"✓ STREAM URL: {stream_value[:30]}..." if len(stream_value) > 30 else f"✓ STREAM URL: {stream_value}"
+    print(status)
+else:
+    print("⚠️  STREAM URL: NOT SET (optional)")
+
 print("")
 
 if missing:
-    print(f"⚠️  Missing {len(missing)} configuration variables:")
+    print(f"⚠️  Missing {len(missing)} required configuration variables:")
     for var in missing:
         print(f"   - Add to .env: {var}='value_here'")
     print("")

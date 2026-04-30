@@ -36,6 +36,7 @@ import json
 import math
 import os
 import subprocess
+import socket
 import threading
 import time
 from datetime import datetime, timezone
@@ -62,11 +63,40 @@ TELEMETRY_INTERVAL = 60.0
 MANUAL_MOVE_HOLD_SECONDS = 1.2
 MANUAL_STOP_HOLD_SECONDS = 0.25
 
-YOUTUBE_STREAM_KEY = os.getenv("YOUTUBE_STREAM_KEY", os.getenv("YOUTUBE_LIVE_STREAM_KEY", ""))
-# YouTube on Raspberry Pi often struggles with RTMPS (SSL) in ffmpeg. Using standard RTMP works better.
-YOUTUBE_RTMP_URL = os.getenv("YOUTUBE_RTMP_URL", "rtmp://a.rtmp.youtube.com/live2")
-YOUTUBE_ENABLED = os.getenv("YOUTUBE_ENABLED", "true").lower() != "false"
-PUBLIC_STREAM_URL = os.getenv("YOUTUBE_STREAM_URL", os.getenv("STREAM_URL", "")).strip()
+STREAM_URL = os.getenv("STREAM_URL", "").strip()
+STREAM_ENABLED = os.getenv("STREAM_ENABLED", "true").lower() != "false"
+STREAM_PUBLIC_URL = os.getenv("STREAM_PUBLIC_URL", "").strip()
+ROVER_IP = os.getenv("ROVER_IP", os.getenv("PI_IP", "")).strip()
+STREAM_PORT = os.getenv("STREAM_PORT", "8081").strip()
+STREAM_PATH = os.getenv("STREAM_PATH", "/video").strip() or "/video"
+PUBLIC_STREAM_URL = STREAM_PUBLIC_URL
+
+
+def derive_public_stream_url() -> Optional[str]:
+    public_url = STREAM_PUBLIC_URL.strip()
+    if public_url:
+        return public_url
+
+    explicit = STREAM_URL.strip()
+    if explicit.startswith(("http://", "https://")):
+        return explicit
+
+    if ROVER_IP:
+        host = ROVER_IP.replace("http://", "").replace("https://", "").rstrip("/")
+        port = STREAM_PORT or "8081"
+        path = STREAM_PATH if STREAM_PATH.startswith("/") else f"/{STREAM_PATH}"
+        return f"http://{host}:{port}{path}"
+
+    return None
+
+
+def get_local_ip() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
+    except Exception:
+        return ROVER_IP or ""
 
 # ---------------- ORIGINAL FOLLOWER CONFIG ----------------
 SERIAL_PORT = "/dev/ttyACM0"
@@ -164,9 +194,13 @@ manual_active_cmd: Optional[str] = None
 manual_speed = 50
 manual_last_command_id = None
 
-# YouTube streaming state
-ffmpeg_process = None
-youtube_frame_errors = 0
+# Camera frame relay state — Pi pushes JPEG frames out to the dashboard
+latest_frame_lock = threading.Lock()
+latest_frame_jpeg: Optional[bytes] = None
+STREAM_PUBLISH_FPS = float(os.getenv("STREAM_PUBLISH_FPS", "5"))
+STREAM_CONNECT_TIMEOUT = float(os.getenv("STREAM_CONNECT_TIMEOUT", "5"))
+STREAM_READ_TIMEOUT = float(os.getenv("STREAM_READ_TIMEOUT", "15"))
+STREAM_JPEG_QUALITY = int(os.getenv("STREAM_JPEG_QUALITY", "70"))
 
 # ---------------- MODELS ----------------
 cv2.setUseOptimized(True)
@@ -218,7 +252,7 @@ last_print_time = 0.0
 def load_dashboard_config():
     """Load dashboard config from ~/rover/rover-pi-client/.env."""
     global DASHBOARD_URL, API_TOKEN, ROVER_ID
-    global YOUTUBE_STREAM_KEY, YOUTUBE_RTMP_URL, YOUTUBE_ENABLED, PUBLIC_STREAM_URL
+    global STREAM_URL, STREAM_ENABLED, STREAM_PUBLIC_URL, PUBLIC_STREAM_URL, ROVER_IP, STREAM_PORT
 
     if ENV_FILE.exists():
         try:
@@ -238,14 +272,17 @@ def load_dashboard_config():
                         API_TOKEN = value
                     elif key == "ROVER_ID":
                         ROVER_ID = value
-                    elif key in ("YOUTUBE_STREAM_KEY", "YOUTUBE_LIVE_STREAM_KEY"):
-                        YOUTUBE_STREAM_KEY = value
-                    elif key == "YOUTUBE_RTMP_URL":
-                        YOUTUBE_RTMP_URL = value
-                    elif key == "YOUTUBE_ENABLED":
-                        YOUTUBE_ENABLED = value.lower() != "false"
-                    elif key in ("YOUTUBE_STREAM_URL", "STREAM_URL"):
+                    elif key == "STREAM_URL":
+                        STREAM_URL = value
+                    elif key == "STREAM_PUBLIC_URL":
+                        STREAM_PUBLIC_URL = value
                         PUBLIC_STREAM_URL = value
+                    elif key in ("ROVER_IP", "PI_IP"):
+                        ROVER_IP = value
+                    elif key == "STREAM_PORT":
+                        STREAM_PORT = value
+                    elif key == "STREAM_ENABLED":
+                        STREAM_ENABLED = value.lower() != "false"
         except Exception as e:
             print(f"[DASHBOARD] Failed to read {ENV_FILE}: {e}")
 
@@ -254,10 +291,10 @@ def load_dashboard_config():
     else:
         print("[DASHBOARD] Missing DASHBOARD_URL/API_TOKEN/ROVER_ID; manual dashboard control disabled.")
 
-    if YOUTUBE_ENABLED and YOUTUBE_STREAM_KEY:
-        print("[YOUTUBE] Stream key loaded.")
-    elif YOUTUBE_ENABLED:
-        print("[YOUTUBE] No YOUTUBE_STREAM_KEY set; YouTube streaming disabled.")
+    if STREAM_ENABLED:
+        print(f"[STREAM] Frames will be pushed to {DASHBOARD_URL}/api/rover/frame")
+    else:
+        print("[STREAM] STREAM_ENABLED=false; frame publishing disabled.")
 
 
 def dashboard_configured():
@@ -346,12 +383,40 @@ def update_stream_url(stream_url: str) -> bool:
             timeout=5,
         )
         if response.status_code in (200, 201):
-            print(f"[DASHBOARD] YouTube stream URL updated: {stream_url}")
+            print(f"[DASHBOARD] Stream URL updated: {stream_url}")
             return True
 
         print(f"[DASHBOARD] Stream URL update failed: {response.status_code} {response.text[:160]}")
     except Exception as e:
         print(f"[DASHBOARD] Stream URL update error: {e}")
+
+    return False
+
+
+def update_rover_network_info(stream_url: str, ip_address: str, stream_port: int) -> bool:
+    if not dashboard_configured():
+        return False
+
+    payload = {
+        "stream_url": stream_url,
+        "ip_address": ip_address,
+        "stream_port": stream_port,
+    }
+
+    try:
+        response = dashboard_session.patch(
+            dashboard_api_url("/rover/settings"),
+            json=payload,
+            headers=dashboard_headers(content_type=True),
+            timeout=5,
+        )
+        if response.status_code in (200, 201):
+            print(f"[DASHBOARD] Network info updated: {ip_address}:{stream_port} -> {stream_url}")
+            return True
+
+        print(f"[DASHBOARD] Network info update failed: {response.status_code} {response.text[:160]}")
+    except Exception as e:
+        print(f"[DASHBOARD] Network info update error: {e}")
 
     return False
 
@@ -1172,105 +1237,82 @@ def print_status(now):
     )
 
 
-# ---------------- LOCAL MJPEG TEST STREAM ----------------
-# Removed as requested
+# ---------------- DASHBOARD FRAME RELAY ----------------
+
+def update_latest_frame(frame):
+    """Encode the most recent camera frame for the publisher thread."""
+    global latest_frame_jpeg
+
+    success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    if not success:
+        return
+
+    with latest_frame_lock:
+        latest_frame_jpeg = encoded.tobytes()
 
 
-def start_youtube_stream():
-    """Start FFmpeg to pull from the local HTTP stream and push to YouTube Live."""
-    global ffmpeg_process
+def stream_publish_loop():
+    """Continuously POST the latest JPEG frame to the dashboard relay endpoint.
 
-    if not YOUTUBE_ENABLED or not YOUTUBE_STREAM_KEY:
-        return False
+    Outbound-only — works through NAT without ngrok or port forwarding. The
+    dashboard caches the latest frame and serves it to browsers as MJPEG via
+    /rover/stream.
+    """
+    interval = 1.0 / max(1.0, STREAM_PUBLISH_FPS)
+    last_logged_failure = 0.0
+    consecutive_failures = 0
 
-    def _run_ffmpeg():
-        global ffmpeg_process
-        
-        destination = f"{YOUTUBE_RTMP_URL.rstrip('/')}/{YOUTUBE_STREAM_KEY}"
-        cmd = [
-            "ffmpeg",
-            "-loglevel", "warning",
-            "-use_wallclock_as_timestamps", "1",  # Crucial for pipe latency: tags frames with real time immediately!
-            "-f", "image2pipe",
-            "-vcodec", "mjpeg",
-            "-r", "30",
-            "-i", "-",
-            "-f", "lavfi",
-            "-i", "anullsrc=channel_layout=mono:sample_rate=44100",
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-tune", "zerolatency",
-            "-b:v", "2500k",             
-            "-maxrate", "2500k",
-            "-minrate", "2500k",
-            "-bufsize", "2500k",         # Cut to a 1-second maximum window
-            "-pix_fmt", "yuv420p",
-            "-r", "30",
-            "-g", "60",
-            "-c:a", "aac",
-            "-b:a", "128k",
-            "-shortest",
-            "-f", "flv",
-            destination,
-        ]
+    while not shutdown_event.is_set():
+        if not (STREAM_ENABLED and dashboard_configured()):
+            shutdown_event.wait(2.0)
+            continue
+
+        with latest_frame_lock:
+            frame_bytes = latest_frame_jpeg
+
+        if frame_bytes is None:
+            shutdown_event.wait(0.1)
+            continue
 
         try:
-            ffmpeg_process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-            print(f"[YOUTUBE] FFmpeg started (PID: {ffmpeg_process.pid}), reading from stdin")
+            response = dashboard_session.post(
+                dashboard_api_url("/rover/frame"),
+                data=frame_bytes,
+                headers={
+                    "Authorization": f"Bearer {API_TOKEN}",
+                    "X-Rover-Id": ROVER_ID,
+                    "Content-Type": "image/jpeg",
+                    "Accept": "application/json",
+                },
+                timeout=STREAM_UPLOAD_TIMEOUT,
+            )
+            if response.status_code in (200, 201):
+                consecutive_failures = 0
+            else:
+                consecutive_failures += 1
+                now_log = time.time()
+                if now_log - last_logged_failure > 5:
+                    print(f"[STREAM] Frame upload failed: {response.status_code} {response.text[:160]}")
+                    last_logged_failure = now_log
         except Exception as e:
-            print(f"[YOUTUBE] Failed to start FFmpeg: {e}")
+            consecutive_failures += 1
+            now_log = time.time()
+            if now_log - last_logged_failure > 5:
+                print(f"[STREAM] Frame upload error: {e}")
+                last_logged_failure = now_log
 
-    threading.Thread(target=_run_ffmpeg, daemon=True).start()
-    return True
-
-
-def send_frame_to_youtube(frame):
-    global ffmpeg_process, youtube_frame_errors
-
-    if ffmpeg_process is None:
-        return
-        
-    if ffmpeg_process.poll() is not None:
-        if youtube_frame_errors == 0:
-            print(f"[YOUTUBE] FFmpeg process died unexpectedly! Exit code: {ffmpeg_process.returncode}")
-            youtube_frame_errors = 1  # Prevents log spam
-        return
-        
-    try:
-        if ffmpeg_process.stdin:
-            # Encode frame to JPEG before piping to prevent raw byte misalignment (TV static)
-            success, encoded_image = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-            if success:
-                ffmpeg_process.stdin.write(encoded_image.tobytes())
-                ffmpeg_process.stdin.flush()  # FORCE immediately into FFmpeg (prevents pipe buffering delay)
-    except Exception as e:
-        if youtube_frame_errors == 0:
-            print(f"[YOUTUBE] Error writing to FFmpeg: {e}")
-            youtube_frame_errors = 1
+        delay = interval if consecutive_failures < 5 else min(2.0, interval * 5)
+        shutdown_event.wait(delay)
 
 
-def stop_youtube_stream():
-    global ffmpeg_process
-
-    if ffmpeg_process is None:
+def start_stream_publisher():
+    if not STREAM_ENABLED:
+        print("[STREAM] Stream publishing disabled (STREAM_ENABLED=false).")
         return
 
-    try:
-        if ffmpeg_process.stdin:
-            ffmpeg_process.stdin.close()
-    except Exception:
-        pass
-
-    try:
-        ffmpeg_process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        ffmpeg_process.kill()
-        ffmpeg_process.wait()
-    except Exception:
-        pass
-
-    print("[YOUTUBE] FFmpeg stopped.")
-    ffmpeg_process = None
+    threading.Thread(target=stream_publish_loop, daemon=True).start()
+    fps = max(1.0, STREAM_PUBLISH_FPS)
+    print(f"[STREAM] Frame publisher started (target ~{fps:.0f} fps to dashboard).")
 
 
 # ---------------- STARTUP ----------------
@@ -1278,9 +1320,22 @@ load_dashboard_config()
 open_serial()
 cap = open_camera()
 send_indicator("FREE")
-start_youtube_stream()
-if PUBLIC_STREAM_URL:
-    update_stream_url(PUBLIC_STREAM_URL)
+start_stream_publisher()
+
+local_ip = get_local_ip()
+if local_ip:
+    ROVER_IP = local_ip
+
+# The dashboard pulls frames from its own relay cache, not from the Pi directly.
+# A non-empty stream_url just signals "streaming active" to the frontend.
+relay_marker = "relay://dashboard" if STREAM_ENABLED else ""
+
+if dashboard_configured() and relay_marker:
+    update_rover_network_info(
+        relay_marker,
+        local_ip or ROVER_IP or "",
+        int(STREAM_PORT or "8081"),
+    )
 
 dashboard_thread = threading.Thread(target=dashboard_poll_loop, daemon=True)
 dashboard_thread.start()
@@ -1303,9 +1358,9 @@ try:
         now = time.time()
         h, w = frame.shape[:2]
         frame_count += 1
-        send_frame_to_youtube(frame)
+        update_latest_frame(frame)
 
-        # Update the local test stream
+
         if apply_manual_override(now):
             update_indicator_state(now)
             print_status(now)
@@ -1604,11 +1659,6 @@ finally:
 
     try:
         hands.close()
-    except Exception:
-        pass
-
-    try:
-        stop_youtube_stream()
     except Exception:
         pass
 
