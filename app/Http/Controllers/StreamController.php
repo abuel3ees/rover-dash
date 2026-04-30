@@ -10,9 +10,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class StreamController extends Controller
 {
     private const MAX_STREAM_SECONDS = 1800;
-    private const FRAME_FRESH_SECONDS = 5;
-    private const POLL_MICROS_NEW = 50_000;
-    private const POLL_MICROS_IDLE = 200_000;
+    private const FRAME_FRESH_SECONDS = 3;
+    private const POLL_MICROS_NEW = 15_000;
+    private const POLL_MICROS_IDLE = 100_000;
 
     public function health(Request $request): JsonResponse
     {

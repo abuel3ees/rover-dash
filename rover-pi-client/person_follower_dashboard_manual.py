@@ -197,10 +197,10 @@ manual_last_command_id = None
 # Camera frame relay state — Pi pushes JPEG frames out to the dashboard
 latest_frame_lock = threading.Lock()
 latest_frame_jpeg: Optional[bytes] = None
-STREAM_PUBLISH_FPS = float(os.getenv("STREAM_PUBLISH_FPS", "5"))
-STREAM_CONNECT_TIMEOUT = float(os.getenv("STREAM_CONNECT_TIMEOUT", "5"))
-STREAM_READ_TIMEOUT = float(os.getenv("STREAM_READ_TIMEOUT", "15"))
-STREAM_JPEG_QUALITY = int(os.getenv("STREAM_JPEG_QUALITY", "70"))
+STREAM_PUBLISH_FPS = float(os.getenv("STREAM_PUBLISH_FPS", "15"))
+STREAM_CONNECT_TIMEOUT = float(os.getenv("STREAM_CONNECT_TIMEOUT", "3"))
+STREAM_READ_TIMEOUT = float(os.getenv("STREAM_READ_TIMEOUT", "5"))
+STREAM_JPEG_QUALITY = int(os.getenv("STREAM_JPEG_QUALITY", "65"))
 
 # ---------------- MODELS ----------------
 cv2.setUseOptimized(True)
@@ -1243,7 +1243,7 @@ def update_latest_frame(frame):
     """Encode the most recent camera frame for the publisher thread."""
     global latest_frame_jpeg
 
-    success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+    success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, STREAM_JPEG_QUALITY])
     if not success:
         return
 
@@ -1260,6 +1260,7 @@ def stream_publish_loop():
     """
     interval = 1.0 / max(1.0, STREAM_PUBLISH_FPS)
     last_logged_failure = 0.0
+    last_logged_success = 0.0
     consecutive_failures = 0
 
     while not shutdown_event.is_set():
@@ -1274,6 +1275,7 @@ def stream_publish_loop():
             shutdown_event.wait(0.1)
             continue
 
+        upload_started = time.time()
         try:
             response = dashboard_session.post(
                 dashboard_api_url("/rover/frame"),
@@ -1283,25 +1285,42 @@ def stream_publish_loop():
                     "X-Rover-Id": ROVER_ID,
                     "Content-Type": "image/jpeg",
                     "Accept": "application/json",
+                    "Connection": "keep-alive",
                 },
-                timeout=STREAM_UPLOAD_TIMEOUT,
+                timeout=(STREAM_CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
             )
+            elapsed = time.time() - upload_started
             if response.status_code in (200, 201):
                 consecutive_failures = 0
+                if time.time() - last_logged_success > 30:
+                    print(f"[STREAM] Frame uploaded ({len(frame_bytes)} B in {elapsed*1000:.0f} ms)")
+                    last_logged_success = time.time()
             else:
                 consecutive_failures += 1
-                now_log = time.time()
-                if now_log - last_logged_failure > 5:
+                if time.time() - last_logged_failure > 5:
                     print(f"[STREAM] Frame upload failed: {response.status_code} {response.text[:160]}")
-                    last_logged_failure = now_log
+                    last_logged_failure = time.time()
+        except requests.exceptions.ReadTimeout:
+            consecutive_failures += 1
+            if time.time() - last_logged_failure > 5:
+                print(
+                    f"[STREAM] Read timeout after {STREAM_READ_TIMEOUT}s — "
+                    f"upstream too slow. Lower STREAM_PUBLISH_FPS or move off ngrok-free."
+                )
+                last_logged_failure = time.time()
         except Exception as e:
             consecutive_failures += 1
-            now_log = time.time()
-            if now_log - last_logged_failure > 5:
+            if time.time() - last_logged_failure > 5:
                 print(f"[STREAM] Frame upload error: {e}")
-                last_logged_failure = now_log
+                last_logged_failure = time.time()
 
-        delay = interval if consecutive_failures < 5 else min(2.0, interval * 5)
+        # Pace to target FPS, but never queue: while we were uploading the
+        # capture loop already overwrote latest_frame_jpeg, so the next
+        # iteration just sends the freshest frame.
+        elapsed = time.time() - upload_started
+        delay = max(0.0, interval - elapsed)
+        if consecutive_failures >= 5:
+            delay = max(delay, min(5.0, interval * 5))
         shutdown_event.wait(delay)
 
 
