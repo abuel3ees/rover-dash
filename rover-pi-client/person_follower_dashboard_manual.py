@@ -225,6 +225,7 @@ UNLOCK_HAND_REGION_FRAC = 0.60
 # --- Stability / grace settings ---
 POST_LOCK_STABLE_FRAMES = 3
 TARGET_INVALID_GRACE_TIME = 0.40
+AUTO_REACQUIRE_SECONDS = config_float("AUTO_REACQUIRE_SECONDS", 4.0)
 
 # --- Console debug ---
 PRINT_INTERVAL = 0.25
@@ -273,11 +274,11 @@ HLS_OUTPUT_DIR = Path(config_value("HLS_OUTPUT_DIR", "/tmp/rover-hls"))
 HLS_PLAYLIST_NAME = config_value("HLS_PLAYLIST_NAME", "stream.m3u8")
 HLS_PUBLIC_URL = config_value("HLS_PUBLIC_URL", "").strip()
 HLS_FPS = config_float("HLS_FPS", 24)
-HLS_SEGMENT_SECONDS = config_float("HLS_SEGMENT_SECONDS", 1.0)
-HLS_LIST_SIZE = config_int("HLS_LIST_SIZE", 6)
-HLS_BITRATE = config_value("HLS_BITRATE", "2200k")
+HLS_SEGMENT_SECONDS = config_float("HLS_SEGMENT_SECONDS", 0.5)
+HLS_LIST_SIZE = config_int("HLS_LIST_SIZE", 3)
+HLS_BITRATE = config_value("HLS_BITRATE", "1800k")
 HLS_ENCODER = config_value("HLS_ENCODER", "libx264")
-HLS_UPLOAD_POLL_INTERVAL = config_float("HLS_UPLOAD_POLL_INTERVAL", 0.15)
+HLS_UPLOAD_POLL_INTERVAL = config_float("HLS_UPLOAD_POLL_INTERVAL", 0.05)
 
 # Runtime performance stats
 loop_fps_ewma = 0.0
@@ -337,6 +338,7 @@ cached_hand_results = None
 
 target_stable_count = 0
 target_invalid_since = None
+auto_reacquire_until = 0.0
 
 pulse_active = False
 pulse_cmd = None
@@ -720,6 +722,7 @@ def reset_autonomous_state_for_manual():
     global state, target_track_id, lost_timer, smooth_tx, smooth_height
     global peace_hold_start, peace_candidate_track, open_palm_hold_start
     global target_stable_count, target_invalid_since
+    global auto_reacquire_until
     global pulse_active, pulse_cmd, pulse_start_time, pulse_duration, settle_until
     global cached_hand_results, unlock_indicator_until
 
@@ -733,6 +736,7 @@ def reset_autonomous_state_for_manual():
     open_palm_hold_start = None
     target_stable_count = 0
     target_invalid_since = None
+    auto_reacquire_until = 0.0
     pulse_active = False
     pulse_cmd = None
     pulse_start_time = 0.0
@@ -761,6 +765,7 @@ def enter_manual_mode():
 def exit_manual_mode():
     """Return to automatic person following."""
     global manual_mode_enabled, manual_override_until, manual_active_cmd
+    global auto_reacquire_until
 
     with manual_lock:
         manual_mode_enabled = False
@@ -768,6 +773,7 @@ def exit_manual_mode():
         manual_override_until = 0.0
 
     reset_autonomous_state_for_manual()
+    auto_reacquire_until = time.time() + AUTO_REACQUIRE_SECONDS
     send_cmd("STOP")
     send_indicator("FREE")
 
@@ -1580,7 +1586,7 @@ def get_latest_hls_frame(timeout: float = 5.0):
 
 def build_hls_ffmpeg_command(width: int, height: int) -> list[str]:
     fps = max(1, int(HLS_FPS))
-    segment_seconds = max(0.5, HLS_SEGMENT_SECONDS)
+    segment_seconds = max(0.25, HLS_SEGMENT_SECONDS)
     gop = max(1, int(fps * segment_seconds))
     playlist_path = str(HLS_OUTPUT_DIR / HLS_PLAYLIST_NAME)
     segment_path = str(HLS_OUTPUT_DIR / "segment_%06d.ts")
@@ -1626,7 +1632,7 @@ def build_hls_ffmpeg_command(width: int, height: int) -> list[str]:
         "-hls_time",
         str(segment_seconds),
         "-hls_list_size",
-        str(max(3, HLS_LIST_SIZE)),
+        str(max(2, HLS_LIST_SIZE)),
         "-hls_flags",
         "delete_segments+omit_endlist+independent_segments",
         "-hls_segment_filename",
@@ -1710,6 +1716,9 @@ def upload_hls_file(path: Path) -> bool:
     except Exception:
         return False
 
+    if path.suffix == ".m3u8":
+        data = tune_hls_playlist_for_low_latency(data)
+
     try:
         response = stream_session.post(
             dashboard_api_url(f"/rover/hls/{path.name}"),
@@ -1726,7 +1735,28 @@ def upload_hls_file(path: Path) -> bool:
         return response.status_code in (200, 201, 204)
     except Exception as e:
         print(f"[HLS] Upload error for {path.name}: {e}")
-        return False
+    return False
+
+
+def tune_hls_playlist_for_low_latency(data: bytes) -> bytes:
+    """Hint players to start very close to the live edge."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+
+    if "#EXT-X-START:" in text:
+        return data
+
+    lines = text.splitlines()
+    start_hint = f"#EXT-X-START:TIME-OFFSET=-{max(0.25, HLS_SEGMENT_SECONDS):.2f},PRECISE=YES"
+
+    if lines and lines[0].strip() == "#EXTM3U":
+        lines.insert(1, start_hint)
+    else:
+        lines.insert(0, start_hint)
+
+    return ("\n".join(lines) + "\n").encode("utf-8")
 
 
 def hls_upload_loop():
@@ -1886,6 +1916,30 @@ try:
         best_free_person_tid = None
         if state == FREE:
             best_free_person_tid = select_best_unlocked_person(person_boxes, w, h)
+            if auto_reacquire_until and now >= auto_reacquire_until:
+                auto_reacquire_until = 0.0
+
+            if (
+                auto_reacquire_until
+                and now < auto_reacquire_until
+                and best_free_person_tid is not None
+            ):
+                target_track_id = best_free_person_tid
+                state = LOCKED
+                send_indicator("LOCKED")
+
+                lost_timer = None
+                smooth_tx = None
+                open_palm_hold_start = None
+                smooth_height = None
+                target_stable_count = 0
+                target_invalid_since = None
+                auto_reacquire_until = 0.0
+                pulse_active = False
+                pulse_cmd = None
+                pulse_duration = 0.0
+                settle_until = 0.0
+                send_cmd("STOP")
 
         # ---------- GESTURES ----------
         if state == FREE and len(person_boxes) > 0:

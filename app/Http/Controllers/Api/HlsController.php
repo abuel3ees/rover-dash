@@ -72,9 +72,8 @@ class HlsController extends Controller
 
         return response()->file($path, [
             'Content-Type' => $this->contentType($filename),
-            'Cache-Control' => str_ends_with($filename, '.m3u8')
-                ? 'no-cache, no-store, must-revalidate'
-                : 'public, max-age=30',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+            'Pragma' => 'no-cache',
             'X-Content-Type-Options' => 'nosniff',
         ]);
     }

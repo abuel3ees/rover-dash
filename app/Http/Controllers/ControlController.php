@@ -53,6 +53,14 @@ class ControlController extends Controller
             'payload' => $request->validated('payload'),
         ]);
 
+        if (in_array($command->type, ['auto_follow', 'stop'], true)) {
+            $rover->commands()
+                ->where('id', '<', $command->id)
+                ->where('status', 'pending')
+                ->whereIn('type', ['manual_override', 'move', 'rotate', 'speed', 'stop'])
+                ->update(['status' => 'expired']);
+        }
+
         broadcast(new CommandSent($command))->toOthers();
 
         return back();

@@ -120,8 +120,10 @@ function useHlsVideo(src: string, enabled: boolean) {
             }
 
             hls = new Hls({
-                liveSyncDurationCount: 2,
+                liveSyncDurationCount: 1,
+                liveMaxLatencyDurationCount: 3,
                 lowLatencyMode: true,
+                maxLiveSyncPlaybackRate: 1.5,
             });
             hls.loadSource(src);
             hls.attachMedia(video);

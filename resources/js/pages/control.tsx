@@ -152,8 +152,10 @@ export default function Control({
             '/control/command',
             { type, payload },
             {
+                async: true,
                 preserveScroll: true,
                 preserveState: true,
+                showProgress: false,
             },
         );
     }
@@ -275,6 +277,7 @@ export default function Control({
                             <CardContent className="space-y-6">
                                 <DirectionalPad
                                     onMove={handleMove}
+                                    onRotate={handleRotate}
                                     onStop={handleStop}
                                     disabled={!manualControlsEnabled}
                                 />
