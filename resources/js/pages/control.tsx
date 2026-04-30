@@ -1,5 +1,15 @@
+import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/react';
-import { Battery, MapPin, OctagonX, Thermometer } from 'lucide-react';
+import {
+    Battery,
+    Bot,
+    Gamepad2,
+    MapPin,
+    OctagonX,
+    RotateCcw,
+    RotateCw,
+    Thermometer,
+} from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { BatteryGauge } from '@/components/rover/battery-gauge';
 import { CameraFeed } from '@/components/rover/camera-feed';
@@ -9,16 +19,9 @@ import { DirectionalPad } from '@/components/rover/directional-pad';
 import { GpsDisplay } from '@/components/rover/gps-display';
 import { RoverStatusBadge } from '@/components/rover/rover-status-badge';
 import { SpeedControl } from '@/components/rover/speed-control';
-import { TelemetryCard } from '@/components/rover/telemetry-card';
 import { TemperatureDisplay } from '@/components/rover/temperature-display';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     useRoverChannel,
     type CommandPayload,
@@ -41,6 +44,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Control', href: '/control' },
 ];
 
+type ControlMode = 'automatic' | 'manual';
+type RotationDirection = 'clockwise' | 'counterclockwise';
+
 export default function Control({
     rover,
     latestTelemetry,
@@ -56,6 +62,15 @@ export default function Control({
         status: rover.status,
         is_online: rover.is_online,
     });
+    const latestModeCommand = recentCommands.find((command) =>
+        ['manual_override', 'auto_follow', 'stop'].includes(command.type),
+    );
+    const [controlMode, setControlMode] = useState<ControlMode>(
+        latestModeCommand?.type === 'manual_override' ||
+            latestModeCommand?.type === 'stop'
+            ? 'manual'
+            : 'automatic',
+    );
     const speedRef = useRef(50);
 
     const handleTelemetry = useCallback((data: TelemetryPayload) => {
@@ -78,6 +93,12 @@ export default function Control({
     }, []);
 
     const handleCommandCompleted = useCallback((data: CommandPayload) => {
+        if (data.type === 'manual_override' || data.type === 'stop') {
+            setControlMode('manual');
+        } else if (data.type === 'auto_follow') {
+            setControlMode('automatic');
+        }
+
         setCommands((prev) =>
             prev.map((cmd) =>
                 cmd.id === data.id
@@ -118,15 +139,36 @@ export default function Control({
         onCommandSent: handleCommandSent,
     });
 
-    function sendCommand(type: string, payload: Record<string, unknown>) {
-        router.post('/control/command', { type, payload }, {
-            preserveScroll: true,
-            preserveState: true,
-        });
+    function sendCommand(
+        type: string,
+        payload: Record<string, FormDataConvertible>,
+    ) {
+        router.post(
+            '/control/command',
+            { type, payload },
+            {
+                preserveScroll: true,
+                preserveState: true,
+            },
+        );
+    }
+
+    function handleManualOverride() {
+        setControlMode('manual');
+        sendCommand('manual_override', {});
+    }
+
+    function handleAutomaticMode() {
+        setControlMode('automatic');
+        sendCommand('auto_follow', {});
     }
 
     function handleMove(direction: string) {
         sendCommand('move', { direction, speed: speedRef.current });
+    }
+
+    function handleRotate(direction: RotationDirection) {
+        sendCommand('rotate', { direction, speed: speedRef.current });
     }
 
     function handleStop() {
@@ -143,37 +185,68 @@ export default function Control({
         | TemperatureTelemetry
         | undefined;
     const gps = telemetry?.gps?.data as GpsTelemetry | undefined;
+    const manualControlsEnabled =
+        roverStatus.is_online && controlMode === 'manual';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Control" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto p-4">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <h1 className="text-xl font-semibold">{rover.name}</h1>
                         <RoverStatusBadge
                             status={roverStatus.status as Rover['status']}
                         />
-                        <ConnectionIndicator
-                            isOnline={roverStatus.is_online}
-                        />
+                        <ConnectionIndicator isOnline={roverStatus.is_online} />
                     </div>
-                    <Button
-                        variant="destructive"
-                        size="lg"
-                        onClick={handleStop}
-                    >
-                        <OctagonX className="mr-2 size-5" />
-                        Emergency Stop
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex overflow-hidden rounded-md border border-border">
+                            <Button
+                                variant={
+                                    controlMode === 'manual'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                className="rounded-none"
+                                onClick={handleManualOverride}
+                                disabled={!roverStatus.is_online}
+                            >
+                                <Gamepad2 className="mr-2 size-4" />
+                                Manual Override
+                            </Button>
+                            <Button
+                                variant={
+                                    controlMode === 'automatic'
+                                        ? 'default'
+                                        : 'ghost'
+                                }
+                                className="rounded-none border-l border-border"
+                                onClick={handleAutomaticMode}
+                                disabled={!roverStatus.is_online}
+                            >
+                                <Bot className="mr-2 size-4" />
+                                Automatic
+                            </Button>
+                        </div>
+                        <Button
+                            variant="destructive"
+                            size="lg"
+                            onClick={handleStop}
+                            disabled={!roverStatus.is_online}
+                        >
+                            <OctagonX className="mr-2 size-5" />
+                            Emergency Stop
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Main Content */}
                 <div className="grid gap-4 lg:grid-cols-5">
-                    {/* Left Column - Camera + Command Log */}
                     <div className="space-y-4 lg:col-span-3">
-                        <CameraFeed isOnline={roverStatus.is_online} streamUrl={rover.stream_url} />
+                        <CameraFeed
+                            isOnline={roverStatus.is_online}
+                            streamUrl={rover.stream_url}
+                        />
 
                         <Card>
                             <CardHeader className="pb-2">
@@ -187,43 +260,83 @@ export default function Control({
                         </Card>
                     </div>
 
-                    {/* Right Column - Controls + Telemetry */}
                     <div className="space-y-4 lg:col-span-2">
-                        {/* Controls */}
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-base">
                                     Movement Controls
                                 </CardTitle>
-                                <CardDescription>
-                                    Use buttons or keyboard to control the rover
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-6">
                                 <DirectionalPad
                                     onMove={handleMove}
                                     onStop={handleStop}
-                                    disabled={!roverStatus.is_online}
+                                    disabled={!manualControlsEnabled}
                                 />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            handleRotate('counterclockwise')
+                                        }
+                                        disabled={!manualControlsEnabled}
+                                    >
+                                        <RotateCcw className="mr-2 size-4" />
+                                        Counter
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            handleRotate('clockwise')
+                                        }
+                                        disabled={!manualControlsEnabled}
+                                    >
+                                        <RotateCw className="mr-2 size-4" />
+                                        Clockwise
+                                    </Button>
+                                </div>
                                 <SpeedControl
                                     onSpeedChange={handleSpeedChange}
-                                    disabled={!roverStatus.is_online}
+                                    disabled={!manualControlsEnabled}
                                 />
                             </CardContent>
                         </Card>
 
-                        {/* Compact Telemetry */}
-                        <TelemetryCard title="Battery" icon={Battery}>
-                            <BatteryGauge data={battery} />
-                        </TelemetryCard>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Battery className="size-4" />
+                                    Battery
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <BatteryGauge data={battery} />
+                            </CardContent>
+                        </Card>
 
-                        <TelemetryCard title="Temperature" icon={Thermometer}>
-                            <TemperatureDisplay data={temperature} />
-                        </TelemetryCard>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Thermometer className="size-4" />
+                                    Temperature
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <TemperatureDisplay data={temperature} />
+                            </CardContent>
+                        </Card>
 
-                        <TelemetryCard title="GPS" icon={MapPin}>
-                            <GpsDisplay data={gps} />
-                        </TelemetryCard>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <MapPin className="size-4" />
+                                    GPS Tracking
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <GpsDisplay data={gps} />
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </div>

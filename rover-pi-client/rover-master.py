@@ -15,7 +15,7 @@ import subprocess
 import signal
 import requests
 import threading
-from pathlib import Path, Path
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any
 
@@ -448,44 +448,23 @@ def rover_client_thread():
 # ============================================================================
 
 def start_camera_server():
-    """Start the camera server (Flask + picamera2 + YouTube streaming)"""
+    """Start the camera server (Flask + picamera2)"""
     log_section("STARTING CAMERA SERVER")
     
     try:
-        # Read YouTube stream key from .env
-        youtube_stream_key = ''
-        try:
-            with open(ENV_FILE, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('YOUTUBE_STREAM_KEY=') or line.startswith('YOUTUBE_LIVE_STREAM_KEY='):
-                        youtube_stream_key = line.split('=', 1)[1].strip().strip('"').strip("'")
-                        break
-        except:
-            pass
-        
-        # Set up environment with YouTube key
-        env = os.environ.copy()
-        if youtube_stream_key:
-            env['YOUTUBE_STREAM_KEY'] = youtube_stream_key
-            log(f"✓ Using YouTube Stream Key from .env")
-        else:
-            log(f"⚠️  No YOUTUBE_STREAM_KEY in .env - camera server will not stream to YouTube")
-        
         with open(CAMERA_SERVER_LOG, 'a') as log_file:
             process = subprocess.Popen(
                 ['python3', str(CONFIG_DIR / 'camera_server.py')],
                 cwd=str(CONFIG_DIR),
                 stdout=log_file,
                 stderr=subprocess.STDOUT,
-                text=True,
-                env=env
+                text=True
             )
         
         processes['camera-server'] = process
         log(f"✓ Camera Server started (PID: {process.pid})")
         log(f"  Logging to: {CAMERA_SERVER_LOG}")
-        log(f"  Streaming to: YouTube Live (if key configured)")
+        log(f"  Streaming on: http://0.0.0.0:5000/video_feed")
         
         time.sleep(2)
         return True

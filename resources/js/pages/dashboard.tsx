@@ -1,3 +1,4 @@
+import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, router } from '@inertiajs/react';
 import {
     Activity,
@@ -25,6 +26,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ActivityFeed } from '@/components/rover/activity-feed';
+import { CameraFeed } from '@/components/rover/camera-feed';
 import { Compass } from '@/components/rover/compass';
 import { OrientationDisplay } from '@/components/rover/orientation-display';
 import { RadialGauge } from '@/components/rover/radial-gauge';
@@ -151,7 +153,9 @@ export default function Dashboard({
                 return 1;
             }
 
-            const elapsed = (Date.now() - new Date(currentRover.last_seen_at).getTime()) / 1000;
+            const elapsed =
+                (Date.now() - new Date(currentRover.last_seen_at).getTime()) /
+                1000;
 
             if (elapsed < 10) {
                 return 4;
@@ -184,11 +188,16 @@ export default function Dashboard({
                             No rover connected
                         </h1>
                         <p className="mx-auto mt-4 max-w-sm text-[15px] leading-relaxed text-muted-foreground">
-                            Connect a Raspberry Pi rover to unlock live telemetry,
-                            camera streaming, and full directional control from your browser.
+                            Connect a Raspberry Pi rover to unlock live
+                            telemetry, camera streaming, and full directional
+                            control from your browser.
                         </p>
                         <div className="mt-8">
-                            <Button asChild size="lg" className="h-11 px-6 text-sm tracking-wide">
+                            <Button
+                                asChild
+                                size="lg"
+                                className="h-11 px-6 text-sm tracking-wide"
+                            >
                                 <Link href="/rover/setup">
                                     Set up your rover
                                     <ArrowUpRight className="ml-2 size-4" />
@@ -199,26 +208,39 @@ export default function Dashboard({
                         <div className="mt-16 grid gap-px overflow-hidden border border-border/60 bg-border/60 sm:grid-cols-3">
                             {[
                                 {
-                                    icon: <Gamepad2 className="size-5 text-foreground/50" />,
+                                    icon: (
+                                        <Gamepad2 className="size-5 text-foreground/50" />
+                                    ),
                                     title: 'Control',
                                     desc: 'D-pad, WASD, speed curves',
                                 },
                                 {
-                                    icon: <Camera className="size-5 text-foreground/50" />,
+                                    icon: (
+                                        <Camera className="size-5 text-foreground/50" />
+                                    ),
                                     title: 'Camera',
                                     desc: 'Live MJPEG streaming',
                                 },
                                 {
-                                    icon: <Activity className="size-5 text-foreground/50" />,
+                                    icon: (
+                                        <Activity className="size-5 text-foreground/50" />
+                                    ),
                                     title: 'Telemetry',
                                     desc: 'GPS, battery, thermals',
                                 },
                             ].map((f) => (
-                                <div key={f.title} className="flex flex-col items-center gap-2.5 bg-card px-6 py-6">
+                                <div
+                                    key={f.title}
+                                    className="flex flex-col items-center gap-2.5 bg-card px-6 py-6"
+                                >
                                     {f.icon}
                                     <div className="text-center">
-                                        <div className="text-sm font-medium tracking-wide">{f.title}</div>
-                                        <div className="mt-0.5 text-xs text-muted-foreground">{f.desc}</div>
+                                        <div className="text-sm font-medium tracking-wide">
+                                            {f.title}
+                                        </div>
+                                        <div className="mt-0.5 text-xs text-muted-foreground">
+                                            {f.desc}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -230,12 +252,26 @@ export default function Dashboard({
     }
 
     const battery = telemetry?.battery?.data as BatteryTelemetry | undefined;
-    const temperature = telemetry?.temperature?.data as TemperatureTelemetry | undefined;
+    const temperature = telemetry?.temperature?.data as
+        | TemperatureTelemetry
+        | undefined;
     const gps = telemetry?.gps?.data as GpsTelemetry | undefined;
-    const accel = telemetry?.accelerometer?.data as AccelerometerTelemetry | undefined;
+    const accel = telemetry?.accelerometer?.data as
+        | AccelerometerTelemetry
+        | undefined;
+    const secondaryTemp = temperature?.ambient_temp ?? temperature?.motor_temp;
+    const secondaryTempLabel =
+        temperature?.ambient_temp !== undefined ? 'Ambient' : 'Motor';
 
-    function sendQuickCommand(type: string, payload: Record<string, unknown> = {}) {
-        router.post('/control/command', { type, payload }, { preserveScroll: true });
+    function sendQuickCommand(
+        type: string,
+        payload: Record<string, FormDataConvertible> = {},
+    ) {
+        router.post(
+            '/control/command',
+            { type, payload },
+            { preserveScroll: true },
+        );
     }
 
     const isOnline = currentRover.is_online;
@@ -244,17 +280,18 @@ export default function Dashboard({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-0 overflow-x-auto">
-
                 {/* ═══ Hero Status Strip ═══════════════════════════════════ */}
                 <div className="border-b border-border/50 bg-card/50">
                     <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
                         <div className="flex items-center gap-4">
                             <div className="relative">
-                                <div className={`flex size-11 items-center justify-center border transition-colors ${
-                                    isOnline
-                                        ? 'border-emerald-500/30 bg-emerald-500/8'
-                                        : 'border-border/60 bg-muted/50'
-                                }`}>
+                                <div
+                                    className={`flex size-11 items-center justify-center border transition-colors ${
+                                        isOnline
+                                            ? 'border-emerald-500/30 bg-emerald-500/8'
+                                            : 'border-border/60 bg-muted/50'
+                                    }`}
+                                >
                                     {isOnline ? (
                                         <Wifi className="size-5 text-emerald-600 dark:text-emerald-400" />
                                     ) : (
@@ -270,18 +307,26 @@ export default function Dashboard({
                             </div>
                             <div>
                                 <div className="flex items-center gap-2.5">
-                                    <h1 className="font-serif text-xl tracking-tight">{currentRover.name}</h1>
+                                    <h1 className="font-serif text-xl tracking-tight">
+                                        {currentRover.name}
+                                    </h1>
                                     <Badge
-                                        variant={isOnline ? 'default' : 'secondary'}
-                                        className={`text-[10px] uppercase tracking-widest font-medium ${
-                                            isOnline ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''
+                                        variant={
+                                            isOnline ? 'default' : 'secondary'
+                                        }
+                                        className={`text-[10px] font-medium tracking-widest uppercase ${
+                                            isOnline
+                                                ? 'bg-emerald-600 text-white hover:bg-emerald-600'
+                                                : ''
                                         }`}
                                     >
                                         {currentRover.status}
                                     </Badge>
                                 </div>
                                 {currentRover.description && (
-                                    <p className="mt-0.5 text-xs text-muted-foreground/70 tracking-wide">{currentRover.description}</p>
+                                    <p className="mt-0.5 text-xs tracking-wide text-muted-foreground/70">
+                                        {currentRover.description}
+                                    </p>
                                 )}
                             </div>
                         </div>
@@ -289,22 +334,36 @@ export default function Dashboard({
                         <div className="flex items-center gap-5 text-xs text-muted-foreground">
                             <div className="flex items-center gap-1.5">
                                 <Circle className="size-2.5 fill-current opacity-30" />
-                                <UptimeCounter since={currentRover.last_seen_at} isOnline={isOnline} />
+                                <UptimeCounter
+                                    since={currentRover.last_seen_at}
+                                    isOnline={isOnline}
+                                />
                             </div>
                             <SignalStrength level={signalLevel} />
                             {currentRover.ip_address && (
-                                <span className="font-mono text-muted-foreground/60">{currentRover.ip_address}</span>
+                                <span className="font-mono text-muted-foreground/60">
+                                    {currentRover.ip_address}
+                                </span>
                             )}
                         </div>
 
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="h-8 text-xs tracking-wide" asChild>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs tracking-wide"
+                                asChild
+                            >
                                 <Link href="/rover/settings">
                                     <Settings className="mr-1.5 size-3.5" />
                                     Settings
                                 </Link>
                             </Button>
-                            <Button size="sm" className="h-8 text-xs tracking-wide" asChild>
+                            <Button
+                                size="sm"
+                                className="h-8 text-xs tracking-wide"
+                                asChild
+                            >
                                 <Link href="/control">
                                     <Gamepad2 className="mr-1.5 size-3.5" />
                                     Control
@@ -321,7 +380,11 @@ export default function Dashboard({
                             label: 'Battery',
                             value: battery ? `${battery.percentage}` : '--',
                             unit: battery ? '%' : '',
-                            sub: battery?.charging ? 'Charging' : battery ? `${battery.voltage}V` : 'No data',
+                            sub: battery?.charging
+                                ? 'Charging'
+                                : battery
+                                  ? `${battery.voltage}V`
+                                  : 'No data',
                             color: 'text-emerald-600 dark:text-emerald-400',
                             icon: <Battery className="size-4" />,
                             trend: batteryHistory,
@@ -329,9 +392,13 @@ export default function Dashboard({
                         },
                         {
                             label: 'CPU Temperature',
-                            value: temperature ? `${temperature.cpu_temp}` : '--',
+                            value: temperature
+                                ? `${temperature.cpu_temp}`
+                                : '--',
                             unit: temperature ? '°C' : '',
-                            sub: temperature ? `Ambient ${temperature.ambient_temp}°C` : 'No data',
+                            sub: temperature
+                                ? `${secondaryTempLabel} ${secondaryTemp ?? '--'}°C`
+                                : 'No data',
                             color: 'text-amber-600 dark:text-amber-400',
                             icon: <Thermometer className="size-4" />,
                             trend: tempHistory,
@@ -341,7 +408,9 @@ export default function Dashboard({
                             label: 'GPS Position',
                             value: gps ? `${gps.latitude.toFixed(4)}°` : '--',
                             unit: '',
-                            sub: gps ? `${gps.longitude.toFixed(4)}° · ${gps.satellites} sats` : 'No fix',
+                            sub: gps
+                                ? `${gps.longitude.toFixed(4)}° · ${gps.satellites} sats`
+                                : 'No fix',
                             color: 'text-sky-600 dark:text-sky-400',
                             icon: <MapPin className="size-4" />,
                             trend: undefined,
@@ -349,30 +418,49 @@ export default function Dashboard({
                         },
                         {
                             label: 'Orientation',
-                            value: accel?.pitch !== undefined && accel?.pitch !== null ? `${accel.pitch.toFixed(1)}°` : '--',
+                            value:
+                                accel?.pitch !== undefined &&
+                                accel?.pitch !== null
+                                    ? `${accel.pitch.toFixed(1)}°`
+                                    : '--',
                             unit: '',
-                            sub: accel?.roll !== undefined && accel?.roll !== null ? `Roll ${accel.roll.toFixed(1)}°` : 'No data',
+                            sub:
+                                accel?.roll !== undefined &&
+                                accel?.roll !== null
+                                    ? `Roll ${accel.roll.toFixed(1)}°`
+                                    : 'No data',
                             color: 'text-violet-600 dark:text-violet-400',
                             icon: <Navigation className="size-4" />,
                             trend: undefined,
                             trendColor: '',
                         },
                     ].map((metric) => (
-                        <div key={metric.label} className="flex items-start justify-between bg-card/80 px-6 py-5">
+                        <div
+                            key={metric.label}
+                            className="flex items-start justify-between bg-card/80 px-6 py-5"
+                        >
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 text-muted-foreground/60">
                                     {metric.icon}
-                                    <span className="text-[11px] font-medium uppercase tracking-[0.1em]">{metric.label}</span>
+                                    <span className="text-[11px] font-medium tracking-[0.1em] uppercase">
+                                        {metric.label}
+                                    </span>
                                 </div>
                                 <div className="mt-2 flex items-baseline gap-0.5">
-                                    <span className={`font-serif text-3xl tabular-nums tracking-tight ${metric.color}`}>
+                                    <span
+                                        className={`font-serif text-3xl tracking-tight tabular-nums ${metric.color}`}
+                                    >
                                         {metric.value}
                                     </span>
                                     {metric.unit && (
-                                        <span className="text-sm text-muted-foreground/50">{metric.unit}</span>
+                                        <span className="text-sm text-muted-foreground/50">
+                                            {metric.unit}
+                                        </span>
                                     )}
                                 </div>
-                                <div className="mt-1 text-[11px] text-muted-foreground/50 tracking-wide">{metric.sub}</div>
+                                <div className="mt-1 text-[11px] tracking-wide text-muted-foreground/50">
+                                    {metric.sub}
+                                </div>
                             </div>
                             {metric.trend && metric.trend.length >= 2 && (
                                 <div className="mt-6 opacity-60">
@@ -393,11 +481,12 @@ export default function Dashboard({
                 {/* ═══ Main Grid ═══════════════════════════════════════════ */}
                 <div className="flex-1 p-6">
                     <div className="grid gap-6 lg:grid-cols-12">
-
                         {/* ─── Instruments ────────────────────────────── */}
                         <div className="lg:col-span-5">
                             <div className="mb-4 flex items-center gap-2">
-                                <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Instruments</span>
+                                <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                    Instruments
+                                </span>
                                 <div className="h-px flex-1 bg-border/40" />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -418,7 +507,14 @@ export default function Dashboard({
                                     />
                                     {batteryHistory.length >= 2 && (
                                         <div className="mt-3 opacity-50">
-                                            <Sparkline data={batteryHistory} width={100} height={20} color="rgb(16, 185, 129)" min={0} max={100} />
+                                            <Sparkline
+                                                data={batteryHistory}
+                                                width={100}
+                                                height={20}
+                                                color="rgb(16, 185, 129)"
+                                                min={0}
+                                                max={100}
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -433,21 +529,34 @@ export default function Dashboard({
                                         dangerThreshold={80}
                                         sublabel={
                                             temperature
-                                                ? `Ambient: ${temperature.ambient_temp}°C`
+                                                ? `${secondaryTempLabel}: ${secondaryTemp ?? '--'}°C`
                                                 : 'No data'
                                         }
                                     />
                                     {tempHistory.length >= 2 && (
                                         <div className="mt-3 opacity-50">
-                                            <Sparkline data={tempHistory} width={100} height={20} color="rgb(245, 158, 11)" min={0} max={100} />
+                                            <Sparkline
+                                                data={tempHistory}
+                                                width={100}
+                                                height={20}
+                                                color="rgb(245, 158, 11)"
+                                                min={0}
+                                                max={100}
+                                            />
                                         </div>
                                     )}
                                 </div>
                                 <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
-                                    <Compass heading={gps?.heading ?? 0} speed={gps?.speed} />
+                                    <Compass
+                                        heading={gps?.heading ?? 0}
+                                        speed={gps?.speed}
+                                    />
                                 </div>
                                 <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
-                                    <OrientationDisplay pitch={accel?.pitch ?? 0} roll={accel?.roll ?? 0} />
+                                    <OrientationDisplay
+                                        pitch={accel?.pitch ?? 0}
+                                        roll={accel?.roll ?? 0}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -455,67 +564,62 @@ export default function Dashboard({
                         {/* ─── Camera + Activity ──────────────────────── */}
                         <div className="lg:col-span-4">
                             <div className="mb-4 flex items-center gap-2">
-                                <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Camera</span>
+                                <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                    Camera
+                                </span>
                                 <div className="h-px flex-1 bg-border/40" />
                             </div>
                             <div className="overflow-hidden border border-border/40 bg-card/60">
-                                <div className="relative aspect-video bg-muted/30">
-                                    {isOnline && currentRover.stream_url ? (
-                                        <>
-                                            <img
-                                                src="/rover/stream"
-                                                alt="Rover camera"
-                                                className="h-full w-full object-cover"
-                                            />
-                                            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-red-600/90 px-2.5 py-1 text-[10px] font-medium uppercase tracking-widest text-white">
-                                                <span className="relative flex size-1.5">
-                                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                                                    <span className="relative inline-flex size-1.5 rounded-full bg-white" />
-                                                </span>
-                                                Live
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="flex h-full flex-col items-center justify-center gap-3">
-                                            <Camera className="size-8 text-muted-foreground/20" />
-                                            <span className="text-[11px] text-muted-foreground/40 tracking-wide">
-                                                {isOnline ? 'No stream configured' : 'Rover offline'}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
+                                <CameraFeed
+                                    isOnline={isOnline}
+                                    streamUrl={currentRover.stream_url}
+                                />
                                 <Link
                                     href="/control"
                                     className="flex items-center justify-between border-t border-border/30 px-4 py-3 text-xs text-muted-foreground transition-colors hover:bg-accent/30 hover:text-foreground"
                                 >
-                                    <span className="tracking-wide">Open Control Center</span>
+                                    <span className="tracking-wide">
+                                        Open Control Center
+                                    </span>
                                     <ChevronRight className="size-3.5" />
                                 </Link>
                             </div>
 
                             <div className="mt-4">
                                 <div className="mb-4 flex items-center gap-2">
-                                    <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Activity</span>
+                                    <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                        Activity
+                                    </span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 <div className="max-h-[280px] overflow-y-auto border border-border/40 bg-card/60 p-4">
-                                    <ActivityFeed commands={commands} telemetry={recentTelemetry ?? []} />
+                                    <ActivityFeed
+                                        commands={commands}
+                                        telemetry={recentTelemetry ?? []}
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         {/* ─── Right Column ───────────────────────────── */}
-                        <div className="lg:col-span-3 space-y-6">
+                        <div className="space-y-6 lg:col-span-3">
                             {/* Quick Commands */}
                             <div>
                                 <div className="mb-4 flex items-center gap-2">
-                                    <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Commands</span>
+                                    <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                        Commands
+                                    </span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     {/* ADDED: Full-width Test Connection Button */}
                                     <button
-                                        onClick={() => sendQuickCommand('ping', { message: 'Hello from Dashboard!' })}
+                                        onClick={() =>
+                                            sendQuickCommand('ping', {
+                                                message:
+                                                    'Hello from Dashboard!',
+                                            })
+                                        }
                                         className="col-span-2 flex h-11 items-center justify-center gap-2 border border-indigo-500/30 bg-indigo-500/10 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-400"
                                     >
                                         <Radio className="size-4" />
@@ -529,21 +633,34 @@ export default function Dashboard({
                                         E-Stop
                                     </button>
                                     <button
-                                        onClick={() => sendQuickCommand('move', { direction: 'forward', speed: 50 })}
+                                        onClick={() =>
+                                            sendQuickCommand('move', {
+                                                direction: 'forward',
+                                                speed: 50,
+                                            })
+                                        }
                                         className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Send className="size-3.5" />
                                         Forward
                                     </button>
                                     <button
-                                        onClick={() => sendQuickCommand('speed', { speed: 25 })}
+                                        onClick={() =>
+                                            sendQuickCommand('speed', {
+                                                speed: 25,
+                                            })
+                                        }
                                         className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Zap className="size-3.5" />
                                         Slow
                                     </button>
                                     <button
-                                        onClick={() => sendQuickCommand('speed', { speed: 75 })}
+                                        onClick={() =>
+                                            sendQuickCommand('speed', {
+                                                speed: 75,
+                                            })
+                                        }
                                         className="flex h-11 items-center justify-center gap-2 border border-border/50 bg-card/60 text-xs font-medium text-foreground/80 transition-colors hover:bg-accent/50"
                                     >
                                         <Zap className="size-3.5" />
@@ -555,50 +672,84 @@ export default function Dashboard({
                             {/* Command Stats */}
                             <div>
                                 <div className="mb-4 flex items-center gap-2">
-                                    <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">Statistics</span>
+                                    <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                        Statistics
+                                    </span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 {stats && stats.totalCommands > 0 ? (
                                     <div className="border border-border/40 bg-card/60 p-4">
                                         <div className="mb-3">
                                             <div className="flex items-baseline justify-between">
-                                                <span className="text-[11px] text-muted-foreground/50 uppercase tracking-wider">Success rate</span>
-                                                <span className="font-serif text-2xl tabular-nums tracking-tight text-emerald-600 dark:text-emerald-400">{stats.executedRate}%</span>
+                                                <span className="text-[11px] tracking-wider text-muted-foreground/50 uppercase">
+                                                    Success rate
+                                                </span>
+                                                <span className="font-serif text-2xl tracking-tight text-emerald-600 tabular-nums dark:text-emerald-400">
+                                                    {stats.executedRate}%
+                                                </span>
                                             </div>
                                             <div className="mt-2 h-1 overflow-hidden rounded-full bg-muted/60">
                                                 <div
                                                     className="h-full rounded-full bg-emerald-500/70 transition-all duration-500"
-                                                    style={{ width: `${stats.executedRate}%` }}
+                                                    style={{
+                                                        width: `${stats.executedRate}%`,
+                                                    }}
                                                 />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-px overflow-hidden border border-border/30 bg-border/30">
                                             {(
                                                 [
-                                                    ['executed', 'Executed', 'text-emerald-600 dark:text-emerald-400'],
-                                                    ['failed', 'Failed', 'text-red-500/80'],
-                                                    ['pending', 'Pending', 'text-amber-500/80'],
-                                                    ['expired', 'Expired', 'text-muted-foreground/40'],
+                                                    [
+                                                        'executed',
+                                                        'Executed',
+                                                        'text-emerald-600 dark:text-emerald-400',
+                                                    ],
+                                                    [
+                                                        'failed',
+                                                        'Failed',
+                                                        'text-red-500/80',
+                                                    ],
+                                                    [
+                                                        'pending',
+                                                        'Pending',
+                                                        'text-amber-500/80',
+                                                    ],
+                                                    [
+                                                        'expired',
+                                                        'Expired',
+                                                        'text-muted-foreground/40',
+                                                    ],
                                                 ] as const
                                             ).map(([key, label, color]) => (
-                                                <div key={key} className="flex flex-col items-center bg-card/80 py-3">
-                                                    <span className={`font-serif text-xl tabular-nums ${color}`}>
-                                                        {stats.commandStats[key] ?? 0}
+                                                <div
+                                                    key={key}
+                                                    className="flex flex-col items-center bg-card/80 py-3"
+                                                >
+                                                    <span
+                                                        className={`font-serif text-xl tabular-nums ${color}`}
+                                                    >
+                                                        {stats.commandStats[
+                                                            key
+                                                        ] ?? 0}
                                                     </span>
-                                                    <span className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground/40">
+                                                    <span className="mt-0.5 text-[10px] tracking-widest text-muted-foreground/40 uppercase">
                                                         {label}
                                                     </span>
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="mt-3 text-center text-[11px] font-mono text-muted-foreground/40">
-                                            {stats.totalCommands.toLocaleString()} total commands
+                                        <div className="mt-3 text-center font-mono text-[11px] text-muted-foreground/40">
+                                            {stats.totalCommands.toLocaleString()}{' '}
+                                            total commands
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="flex flex-col items-center gap-2 border border-border/40 bg-card/60 py-8">
                                         <Send className="size-5 text-muted-foreground/20" />
-                                        <span className="text-[11px] text-muted-foreground/40 tracking-wide">No commands sent yet</span>
+                                        <span className="text-[11px] tracking-wide text-muted-foreground/40">
+                                            No commands sent yet
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -606,29 +757,67 @@ export default function Dashboard({
                             {/* System Info */}
                             <div>
                                 <div className="mb-4 flex items-center gap-2">
-                                    <span className="text-[11px] font-medium uppercase tracking-[0.15em] text-muted-foreground/50">System</span>
+                                    <span className="text-[11px] font-medium tracking-[0.15em] text-muted-foreground/50 uppercase">
+                                        System
+                                    </span>
                                     <div className="h-px flex-1 bg-border/40" />
                                 </div>
                                 <div className="border border-border/40 bg-card/60 p-4">
                                     <div className="space-y-3">
                                         {[
-                                            { icon: <Globe className="size-3.5" />, label: 'IP Address', value: currentRover.ip_address ?? 'Unknown' },
-                                            { icon: <Cpu className="size-3.5" />, label: 'Stream Port', value: String(currentRover.stream_port ?? '--') },
-                                            { icon: <Activity className="size-3.5" />, label: 'Telemetry', value: (stats?.totalTelemetry ?? 0).toLocaleString() },
                                             {
-                                                icon: <Circle className="size-3.5" />,
+                                                icon: (
+                                                    <Globe className="size-3.5" />
+                                                ),
+                                                label: 'IP Address',
+                                                value:
+                                                    currentRover.ip_address ??
+                                                    'Unknown',
+                                            },
+                                            {
+                                                icon: (
+                                                    <Cpu className="size-3.5" />
+                                                ),
+                                                label: 'Stream Port',
+                                                value: String(
+                                                    currentRover.stream_port ??
+                                                        '--',
+                                                ),
+                                            },
+                                            {
+                                                icon: (
+                                                    <Activity className="size-3.5" />
+                                                ),
+                                                label: 'Telemetry',
+                                                value: (
+                                                    stats?.totalTelemetry ?? 0
+                                                ).toLocaleString(),
+                                            },
+                                            {
+                                                icon: (
+                                                    <Circle className="size-3.5" />
+                                                ),
                                                 label: 'Last Seen',
                                                 value: currentRover.last_seen_at
-                                                    ? new Date(currentRover.last_seen_at).toLocaleTimeString()
+                                                    ? new Date(
+                                                          currentRover.last_seen_at,
+                                                      ).toLocaleTimeString()
                                                     : 'Never',
                                             },
                                         ].map((row) => (
-                                            <div key={row.label} className="flex items-center justify-between text-xs">
+                                            <div
+                                                key={row.label}
+                                                className="flex items-center justify-between text-xs"
+                                            >
                                                 <div className="flex items-center gap-2 text-muted-foreground/50">
                                                     {row.icon}
-                                                    <span className="tracking-wide">{row.label}</span>
+                                                    <span className="tracking-wide">
+                                                        {row.label}
+                                                    </span>
                                                 </div>
-                                                <span className="font-mono text-foreground/70">{row.value}</span>
+                                                <span className="font-mono text-foreground/70">
+                                                    {row.value}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>
@@ -673,9 +862,13 @@ export default function Dashboard({
                                 <div className="flex size-10 items-center justify-center bg-muted/40 text-foreground/40 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
                                     {card.icon}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-medium tracking-wide">{card.title}</div>
-                                    <div className="mt-0.5 text-[11px] text-muted-foreground/50 tracking-wide">{card.desc}</div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium tracking-wide">
+                                        {card.title}
+                                    </div>
+                                    <div className="mt-0.5 text-[11px] tracking-wide text-muted-foreground/50">
+                                        {card.desc}
+                                    </div>
                                 </div>
                                 <ChevronRight className="size-4 text-muted-foreground/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary/60" />
                             </Link>

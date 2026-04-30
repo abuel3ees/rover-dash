@@ -61,7 +61,7 @@ export default function RoverSetup() {
                             onChange={(e) =>
                                 setData('description', e.target.value)
                             }
-                            className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             placeholder="A short description of your rover"
                         />
                         <InputError message={errors.description} />
@@ -103,7 +103,7 @@ export default function RoverSetup() {
 
                     <div className="grid gap-2">
                         <Label htmlFor="stream_url">
-                            Camera Stream URL{' '}
+                            YouTube Stream URL{' '}
                             <span className="text-muted-foreground">
                                 (optional)
                             </span>
@@ -114,12 +114,11 @@ export default function RoverSetup() {
                             onChange={(e) =>
                                 setData('stream_url', e.target.value)
                             }
-                            placeholder="http://192.168.1.50:8081/stream.mjpg"
+                            placeholder="https://www.youtube.com/watch?v=..."
                         />
                         <InputError message={errors.stream_url} />
                         <p className="text-xs text-muted-foreground">
-                            The MJPEG stream URL from your Pi camera. This
-                            will be proxied through the server.
+                            The YouTube Live watch URL or your channel URL.
                         </p>
                     </div>
 

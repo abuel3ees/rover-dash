@@ -4,9 +4,13 @@ import {
     ArrowRight,
     ArrowUp,
     Battery,
+    Bot,
     Check,
+    Gamepad2,
     MapPin,
     Octagon,
+    RotateCcw,
+    RotateCw,
     Thermometer,
     X,
     Zap,
@@ -23,28 +27,68 @@ interface ActivityFeedProps {
 }
 
 function getCommandIcon(type: string, payload?: Record<string, unknown>) {
+    if (type === 'manual_override')
+        return <Gamepad2 className="size-3 text-blue-500" />;
+    if (type === 'auto_follow')
+        return <Bot className="size-3 text-emerald-500" />;
     if (type === 'stop') return <Octagon className="size-3 text-red-500" />;
     if (type === 'speed') return <Zap className="size-3 text-yellow-500" />;
+    if (type === 'rotate') {
+        const dir = payload?.direction as string | undefined;
+        if (dir === 'clockwise')
+            return <RotateCw className="size-3 text-blue-500" />;
+        if (dir === 'counterclockwise')
+            return <RotateCcw className="size-3 text-blue-500" />;
+    }
     if (type === 'move') {
         const dir = payload?.direction as string | undefined;
-        if (dir === 'forward') return <ArrowUp className="size-3 text-blue-500" />;
-        if (dir === 'backward') return <ArrowDown className="size-3 text-blue-500" />;
-        if (dir === 'left') return <ArrowLeft className="size-3 text-blue-500" />;
-        if (dir === 'right') return <ArrowRight className="size-3 text-blue-500" />;
+        if (dir === 'forward')
+            return <ArrowUp className="size-3 text-blue-500" />;
+        if (dir === 'backward')
+            return <ArrowDown className="size-3 text-blue-500" />;
+        if (dir === 'left')
+            return <ArrowLeft className="size-3 text-blue-500" />;
+        if (dir === 'right')
+            return <ArrowRight className="size-3 text-blue-500" />;
     }
     return <Zap className="size-3 text-primary" />;
 }
 
 function getTelemetryIcon(type: string) {
-    if (type === 'battery') return <Battery className="size-3 text-green-500" />;
-    if (type === 'temperature') return <Thermometer className="size-3 text-orange-500" />;
+    if (type === 'battery')
+        return <Battery className="size-3 text-green-500" />;
+    if (type === 'temperature')
+        return <Thermometer className="size-3 text-orange-500" />;
     if (type === 'gps') return <MapPin className="size-3 text-cyan-500" />;
     return <Zap className="size-3 text-purple-500" />;
 }
 
 function getStatusIcon(status: string) {
-    if (status === 'executed') return <Check className="size-3 text-green-500" />;
+    if (status === 'executed')
+        return <Check className="size-3 text-green-500" />;
     if (status === 'failed') return <X className="size-3 text-red-500" />;
+    return null;
+}
+
+function formatCommandType(type: string): string {
+    return type.replace(/_/g, ' ');
+}
+
+function getCommandDetail(
+    type: string,
+    payload?: Record<string, unknown>,
+): string | null {
+    if (
+        (type === 'move' || type === 'rotate') &&
+        typeof payload?.direction === 'string'
+    ) {
+        return payload.direction;
+    }
+
+    if (type === 'speed' && typeof payload?.speed === 'number') {
+        return `${payload.speed}%`;
+    }
+
     return null;
 }
 
@@ -72,9 +116,7 @@ export function ActivityFeed({ commands, telemetry }: ActivityFeedProps) {
     if (items.length === 0) {
         return (
             <div className="flex h-full items-center justify-center py-8">
-                <p className="text-sm text-muted-foreground">
-                    No activity yet
-                </p>
+                <p className="text-sm text-muted-foreground">No activity yet</p>
             </div>
         );
     }
@@ -84,7 +126,11 @@ export function ActivityFeed({ commands, telemetry }: ActivityFeedProps) {
             {items.slice(0, 15).map((item, i) => {
                 if (item.kind === 'command') {
                     const cmd = item.data;
-                    const payload = cmd.payload as Record<string, unknown> | undefined;
+                    const payload = cmd.payload as
+                        | Record<string, unknown>
+                        | undefined;
+                    const detail = getCommandDetail(cmd.type, payload);
+
                     return (
                         <div
                             key={`cmd-${cmd.id}`}
@@ -98,22 +144,17 @@ export function ActivityFeed({ commands, telemetry }: ActivityFeedProps) {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <span className="font-medium capitalize">
-                                    {cmd.type}
+                                    {formatCommandType(cmd.type)}
                                 </span>
-                                {cmd.type === 'move' && payload?.direction && (
+                                {detail && (
                                     <span className="ml-1 text-muted-foreground">
-                                        {payload.direction as string}
-                                    </span>
-                                )}
-                                {cmd.type === 'speed' && payload?.speed !== undefined && (
-                                    <span className="ml-1 text-muted-foreground">
-                                        {payload.speed as number}%
+                                        {detail}
                                     </span>
                                 )}
                             </div>
                             <div className="flex items-center gap-1.5">
                                 {getStatusIcon(cmd.status)}
-                                <span className="tabular-nums text-muted-foreground">
+                                <span className="text-muted-foreground tabular-nums">
                                     {formatTime(cmd.created_at)}
                                 </span>
                             </div>
@@ -136,13 +177,17 @@ export function ActivityFeed({ commands, telemetry }: ActivityFeedProps) {
                                 {tel.type}
                             </span>
                             <span className="ml-1 text-muted-foreground">
-                                {tel.type === 'battery' && `${telData.percentage}%`}
-                                {tel.type === 'temperature' && `${telData.cpu_temp}°C`}
-                                {tel.type === 'gps' && `${(telData.latitude as number)?.toFixed(4)}, ${(telData.longitude as number)?.toFixed(4)}`}
-                                {tel.type === 'accelerometer' && `P:${(telData.pitch as number)?.toFixed(1)}°`}
+                                {tel.type === 'battery' &&
+                                    `${telData.percentage}%`}
+                                {tel.type === 'temperature' &&
+                                    `${telData.cpu_temp}°C`}
+                                {tel.type === 'gps' &&
+                                    `${(telData.latitude as number)?.toFixed(4)}, ${(telData.longitude as number)?.toFixed(4)}`}
+                                {tel.type === 'accelerometer' &&
+                                    `P:${(telData.pitch as number)?.toFixed(1)}°`}
                             </span>
                         </div>
-                        <span className="tabular-nums text-muted-foreground">
+                        <span className="text-muted-foreground tabular-nums">
                             {formatTime(tel.recorded_at)}
                         </span>
                     </div>

@@ -4,7 +4,6 @@ import { Copy, Eye, EyeOff, Key, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
-import { StreamHealthCheck } from '@/components/rover/stream-health-check';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -30,7 +29,9 @@ export default function RoverSettings({
     rover: Rover;
     hasToken: boolean;
 }) {
-    const { flash } = usePage<{ flash: { token?: string; error?: string; success?: string } }>().props;
+    const { flash } = usePage<{
+        flash: { token?: string; error?: string; success?: string };
+    }>().props;
     const [showToken, setShowToken] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -89,14 +90,19 @@ export default function RoverSettings({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                    navigator.clipboard.writeText(String(rover.id));
+                                    navigator.clipboard.writeText(
+                                        String(rover.id),
+                                    );
                                 }}
                             >
                                 <Copy className="size-4" />
                             </Button>
                         </div>
                         <p className="mt-2 text-xs text-muted-foreground">
-                            Use this ID in your Pi's .env file as <code className="bg-muted px-1 py-0.5">ROVER_ID={rover.id}</code>
+                            Use this ID in your Pi's .env file as{' '}
+                            <code className="bg-muted px-1 py-0.5">
+                                ROVER_ID={rover.id}
+                            </code>
                         </p>
                     </CardContent>
                 </Card>
@@ -125,16 +131,14 @@ export default function RoverSettings({
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="description">
-                                    Description
-                                </Label>
+                                <Label htmlFor="description">Description</Label>
                                 <textarea
                                     id="description"
                                     value={data.description}
                                     onChange={(e) =>
                                         setData('description', e.target.value)
                                     }
-                                    className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                 />
                                 <InputError message={errors.description} />
                             </div>
@@ -179,7 +183,7 @@ export default function RoverSettings({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="stream_url">
-                                    Camera Stream URL
+                                    YouTube Stream URL
                                 </Label>
                                 <Input
                                     id="stream_url"
@@ -187,15 +191,14 @@ export default function RoverSettings({
                                     onChange={(e) =>
                                         setData('stream_url', e.target.value)
                                     }
-                                    placeholder="http://192.168.1.50:5000/video_feed"
+                                    placeholder="https://www.youtube.com/watch?v=..."
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Enter your Pi's video stream URL. For ngrok tunnels, paste your tunnel URL here.
+                                    Enter the YouTube Live watch URL or your
+                                    channel URL.
                                 </p>
                                 <InputError message={errors.stream_url} />
                             </div>
-
-                            <StreamHealthCheck />
 
                             <div className="flex items-center gap-4">
                                 <Button disabled={processing}>Save</Button>
@@ -247,8 +250,8 @@ export default function RoverSettings({
                         {flash?.token && (
                             <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950">
                                 <p className="mb-2 text-sm font-medium text-green-800 dark:text-green-200">
-                                    Token generated! Copy it now — it
-                                    won't be shown again.
+                                    Token generated! Copy it now — it won't be
+                                    shown again.
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <code className="flex-1 rounded bg-green-100 px-3 py-2 font-mono text-xs dark:bg-green-900">
@@ -259,9 +262,7 @@ export default function RoverSettings({
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() =>
-                                            setShowToken(!showToken)
-                                        }
+                                        onClick={() => setShowToken(!showToken)}
                                     >
                                         {showToken ? (
                                             <EyeOff className="size-4" />
@@ -281,10 +282,7 @@ export default function RoverSettings({
                         )}
 
                         <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={generateToken}
-                            >
+                            <Button variant="outline" onClick={generateToken}>
                                 <Key className="mr-1 size-4" />
                                 {hasToken
                                     ? 'Regenerate Token'
@@ -333,9 +331,7 @@ export default function RoverSettings({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() =>
-                                        setShowDeleteConfirm(false)
-                                    }
+                                    onClick={() => setShowDeleteConfirm(false)}
                                 >
                                     Cancel
                                 </Button>

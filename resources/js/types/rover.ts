@@ -45,7 +45,8 @@ export type BatteryTelemetry = {
 
 export type TemperatureTelemetry = {
     cpu_temp: number;
-    ambient_temp: number;
+    ambient_temp?: number;
+    motor_temp?: number;
 };
 
 export type AccelerometerTelemetry = {
@@ -56,8 +57,22 @@ export type AccelerometerTelemetry = {
     roll: number;
 };
 
-export type CommandType = 'move' | 'stop' | 'speed' | 'camera' | 'custom';
-export type CommandStatus = 'pending' | 'sent' | 'executed' | 'failed' | 'expired';
+export type CommandType =
+    | 'manual_override'
+    | 'auto_follow'
+    | 'move'
+    | 'rotate'
+    | 'stop'
+    | 'speed'
+    | 'camera'
+    | 'custom'
+    | 'ping';
+export type CommandStatus =
+    | 'pending'
+    | 'sent'
+    | 'executed'
+    | 'failed'
+    | 'expired';
 
 export type Command = {
     id: number;

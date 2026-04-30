@@ -1,4 +1,10 @@
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Square } from 'lucide-react';
+import {
+    ArrowDown,
+    ArrowLeft,
+    ArrowRight,
+    ArrowUp,
+    Square,
+} from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 
@@ -108,9 +114,6 @@ export function DirectionalPad({
                 </Button>
                 <div />
             </div>
-            <p className="text-xs text-muted-foreground">
-                WASD or Arrow keys to move, Space to stop
-            </p>
         </div>
     );
 }

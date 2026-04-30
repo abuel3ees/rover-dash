@@ -15,7 +15,17 @@ class StoreCommandRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', 'string', Rule::in(['move', 'stop', 'speed', 'camera', 'custom'])],
+            'type' => ['required', 'string', Rule::in([
+                'manual_override',
+                'auto_follow',
+                'move',
+                'rotate',
+                'stop',
+                'speed',
+                'camera',
+                'custom',
+                'ping',
+            ])],
             'payload' => ['required', 'array'],
         ];
     }

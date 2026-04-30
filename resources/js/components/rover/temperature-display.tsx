@@ -17,6 +17,9 @@ export function TemperatureDisplay({
 
     const cpuTemp = data.cpu_temp ?? 0;
     const cpuWarning = cpuTemp > 70;
+    const secondaryTemp = data.ambient_temp ?? data.motor_temp ?? null;
+    const secondaryLabel =
+        data.ambient_temp !== undefined ? 'Ambient' : 'Motor';
 
     return (
         <div className="space-y-2">
@@ -33,9 +36,11 @@ export function TemperatureDisplay({
             </div>
             <div className="flex items-center gap-2">
                 <Thermometer className="size-4" />
-                <span className="text-sm text-muted-foreground">Ambient</span>
+                <span className="text-sm text-muted-foreground">
+                    {secondaryLabel}
+                </span>
                 <span className="text-lg font-semibold">
-                    {(data.ambient_temp ?? 0).toFixed(1)}°C
+                    {secondaryTemp !== null ? secondaryTemp.toFixed(1) : '--'}°C
                 </span>
             </div>
         </div>
