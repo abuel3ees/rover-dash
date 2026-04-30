@@ -37,14 +37,28 @@ class FrameController extends Controller
         if (@file_put_contents($tmp, $bytes) === false) {
             return response()->json(['message' => 'Failed to persist frame'], 500);
         }
-        @rename($tmp, $path);
+        if (! @rename($tmp, $path)) {
+            return response()->json(['message' => 'Failed to publish frame'], 500);
+        }
 
-        return response()->json(['ok' => true, 'bytes' => $size]);
+        $marker = sprintf('%.6f|%d|%s', microtime(true), $size, bin2hex(random_bytes(4)));
+        $metaPath = self::frameMetaPath($rover->id);
+        $metaTmp = $metaPath . '.tmp';
+        if (@file_put_contents($metaTmp, $marker) === false || ! @rename($metaTmp, $metaPath)) {
+            return response()->json(['message' => 'Failed to publish frame marker'], 500);
+        }
+
+        return response()->noContent();
     }
 
     public static function framePath(int $roverId): string
     {
         return storage_path("app/stream/rover-{$roverId}.jpg");
+    }
+
+    public static function frameMetaPath(int $roverId): string
+    {
+        return storage_path("app/stream/rover-{$roverId}.meta");
     }
 
     private function resolveRover(Request $request): ?Rover

@@ -53,22 +53,69 @@ from ultralytics import YOLO
 CONFIG_DIR = Path.home() / "rover" / "rover-pi-client"
 ENV_FILE = CONFIG_DIR / ".env"
 
-DASHBOARD_URL = os.getenv("DASHBOARD_URL", "").rstrip("/")
-API_TOKEN = os.getenv("API_TOKEN", os.getenv("ROVER_TOKEN", ""))
-ROVER_ID = os.getenv("ROVER_ID", "")
+def read_env_file(path: Path) -> Dict[str, str]:
+    values: Dict[str, str] = {}
+    try:
+        if not path.exists():
+            return values
 
-COMMAND_POLL_INTERVAL = 2.0
-HEARTBEAT_INTERVAL = 10.0
-TELEMETRY_INTERVAL = 60.0
-MANUAL_MOVE_HOLD_SECONDS = 1.2
-MANUAL_STOP_HOLD_SECONDS = 0.25
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
 
-STREAM_URL = os.getenv("STREAM_URL", "").strip()
-STREAM_ENABLED = os.getenv("STREAM_ENABLED", "true").lower() != "false"
-STREAM_PUBLIC_URL = os.getenv("STREAM_PUBLIC_URL", "").strip()
-ROVER_IP = os.getenv("ROVER_IP", os.getenv("PI_IP", "")).strip()
-STREAM_PORT = os.getenv("STREAM_PORT", "8081").strip()
-STREAM_PATH = os.getenv("STREAM_PATH", "/video").strip() or "/video"
+                key, value = line.split("=", 1)
+                values[key.strip()] = value.strip().strip('"').strip("'")
+    except Exception as e:
+        print(f"[DASHBOARD] Failed to read {path}: {e}")
+
+    return values
+
+
+ENV_VALUES = read_env_file(ENV_FILE)
+
+
+def config_value(key: str, default: Any = "") -> str:
+    return str(os.getenv(key, ENV_VALUES.get(key, default)))
+
+
+def config_float(key: str, default: Any) -> float:
+    try:
+        return float(config_value(key, default))
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def config_int(key: str, default: Any) -> int:
+    try:
+        return int(float(config_value(key, default)))
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def config_bool(key: str, default: Any) -> bool:
+    value = config_value(key, default).strip().lower()
+    return value not in ("0", "false", "no", "off")
+
+
+DASHBOARD_URL = config_value("DASHBOARD_URL", "").rstrip("/")
+API_TOKEN = config_value("API_TOKEN", config_value("ROVER_TOKEN", ""))
+ROVER_ID = config_value("ROVER_ID", "")
+
+COMMAND_POLL_INTERVAL = config_float("COMMAND_POLL_INTERVAL", 0.25)
+DASHBOARD_REQUEST_TIMEOUT = config_float("DASHBOARD_REQUEST_TIMEOUT", 2.0)
+HEARTBEAT_INTERVAL = config_float("HEARTBEAT_INTERVAL", 10.0)
+TELEMETRY_INTERVAL = config_float("TELEMETRY_INTERVAL", 60.0)
+MANUAL_MOVE_HOLD_SECONDS = config_float("MANUAL_MOVE_HOLD_SECONDS", 0.6)
+MANUAL_STOP_HOLD_SECONDS = config_float("MANUAL_STOP_HOLD_SECONDS", 0.25)
+
+STREAM_URL = config_value("STREAM_URL", "").strip()
+STREAM_ENABLED = config_bool("STREAM_ENABLED", "true")
+STREAM_PUBLIC_URL = config_value("STREAM_PUBLIC_URL", "").strip()
+ROVER_IP = config_value("ROVER_IP", config_value("PI_IP", "")).strip()
+STREAM_PORT = config_value("STREAM_PORT", "8081").strip()
+STREAM_PATH = config_value("STREAM_PATH", "/video").strip() or "/video"
 PUBLIC_STREAM_URL = STREAM_PUBLIC_URL
 
 
@@ -105,8 +152,8 @@ SERIAL_BAUD = 115200
 last_send_time = 0.0
 SEND_REPEAT_INTERVAL = 0.12
 
-MODEL_PATH = "yolov8n.pt"
-CAM_INDEX = 10
+MODEL_PATH = config_value("MODEL_PATH", "yolov8n.pt")
+CAM_INDEX = config_int("CAM_INDEX", 10)
 CAMERA_FALLBACKS = (0, 1, 2)
 
 LOST_TIMEOUT = 5.0
@@ -117,18 +164,25 @@ MAX_CAMERA_FAILS = 20
 LOCK_HOLD_SECONDS = 0.20
 UNLOCK_HOLD_SECONDS = 1.2
 
-PERSON_CONF = 0.22
-YOLO_IMGSZ = 320
-HAND_PROCESS_SCALE = 0.50
+PERSON_CONF = config_float("PERSON_CONF", 0.22)
+YOLO_IMGSZ = config_int("YOLO_IMGSZ", 288)
+YOLO_MAX_DET = config_int("YOLO_MAX_DET", 4)
+TRACKER_CONFIG = config_value("TRACKER_CONFIG", "bytetrack.yaml")
+HAND_PROCESS_SCALE = config_float("HAND_PROCESS_SCALE", 0.35)
+MAX_HANDS = config_int("MAX_HANDS", 1)
 
-FRAME_W = 480
-FRAME_H = 270
+FRAME_W = config_int("FRAME_W", 480)
+FRAME_H = config_int("FRAME_H", 270)
+CAMERA_FPS = config_int("CAMERA_FPS", 60)
+CAMERA_READ_THROTTLE_FPS = config_float("CAMERA_READ_THROTTLE_FPS", 0)
+CAMERA_THREADED = config_bool("CAMERA_THREADED", "true")
+CAMERA_READ_TIMEOUT = config_float("CAMERA_READ_TIMEOUT", 1.0)
 
 # --- FPS optimization ---
-TRACK_EVERY_N_FRAMES_FREE = 2
-TRACK_EVERY_N_FRAMES_LOCKED = 2
-HANDS_EVERY_N_FRAMES_FREE = 2
-HANDS_EVERY_N_FRAMES_LOCKED = 3
+TRACK_EVERY_N_FRAMES_FREE = config_int("TRACK_EVERY_N_FRAMES_FREE", 3)
+TRACK_EVERY_N_FRAMES_LOCKED = config_int("TRACK_EVERY_N_FRAMES_LOCKED", 2)
+HANDS_EVERY_N_FRAMES_FREE = config_int("HANDS_EVERY_N_FRAMES_FREE", 3)
+HANDS_EVERY_N_FRAMES_LOCKED = config_int("HANDS_EVERY_N_FRAMES_LOCKED", 4)
 
 # --- Distance control uses YOLO person height only ---
 STOP_HEIGHT_THRESHOLD = 190
@@ -185,6 +239,8 @@ unlock_indicator_until = 0.0
 
 # Dashboard manual override state
 dashboard_session = requests.Session()
+stream_session = requests.Session()
+telemetry_session = requests.Session()
 shutdown_event = threading.Event()
 serial_lock = threading.Lock()
 manual_lock = threading.Lock()
@@ -196,14 +252,38 @@ manual_last_command_id = None
 
 # Camera frame relay state — Pi pushes JPEG frames out to the dashboard
 latest_frame_lock = threading.Lock()
-latest_frame_jpeg: Optional[bytes] = None
-STREAM_PUBLISH_FPS = float(os.getenv("STREAM_PUBLISH_FPS", "15"))
-STREAM_CONNECT_TIMEOUT = float(os.getenv("STREAM_CONNECT_TIMEOUT", "3"))
-STREAM_READ_TIMEOUT = float(os.getenv("STREAM_READ_TIMEOUT", "5"))
-STREAM_JPEG_QUALITY = int(os.getenv("STREAM_JPEG_QUALITY", "65"))
+latest_stream_frame = None
+latest_stream_frame_seq = 0
+latest_stream_jpeg: Optional[bytes] = None
+latest_stream_jpeg_seq = -1
+last_stream_frame_capture_time = 0.0
+STREAM_PUBLISH_FPS = config_float("STREAM_PUBLISH_FPS", 0)
+STREAM_CAPTURE_FPS = config_float("STREAM_CAPTURE_FPS", STREAM_PUBLISH_FPS)
+STREAM_CONNECT_TIMEOUT = config_float("STREAM_CONNECT_TIMEOUT", 1.0)
+STREAM_READ_TIMEOUT = config_float("STREAM_READ_TIMEOUT", 2.0)
+STREAM_JPEG_QUALITY = config_int("STREAM_JPEG_QUALITY", 55)
+STREAM_FRAME_WIDTH = config_int("STREAM_FRAME_WIDTH", FRAME_W)
+STREAM_FRAME_HEIGHT = config_int("STREAM_FRAME_HEIGHT", 0)
+STREAM_RESEND_STALE_FRAMES = config_bool("STREAM_RESEND_STALE_FRAMES", "true")
+STREAM_FAILURE_BACKOFF = config_float("STREAM_FAILURE_BACKOFF", 0.25)
+
+# Runtime performance stats
+loop_fps_ewma = 0.0
+last_loop_time = 0.0
 
 # ---------------- MODELS ----------------
 cv2.setUseOptimized(True)
+try:
+    cv2.setNumThreads(config_int("OPENCV_THREADS", 1))
+except Exception:
+    pass
+
+try:
+    import torch
+
+    torch.set_num_threads(config_int("TORCH_THREADS", 2))
+except Exception:
+    pass
 
 model = YOLO(MODEL_PATH)
 try:
@@ -213,7 +293,7 @@ except Exception:
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
-    max_num_hands=2,
+    max_num_hands=MAX_HANDS,
     min_detection_confidence=0.6,
     min_tracking_confidence=0.6,
 )
@@ -254,37 +334,15 @@ def load_dashboard_config():
     global DASHBOARD_URL, API_TOKEN, ROVER_ID
     global STREAM_URL, STREAM_ENABLED, STREAM_PUBLIC_URL, PUBLIC_STREAM_URL, ROVER_IP, STREAM_PORT
 
-    if ENV_FILE.exists():
-        try:
-            with open(ENV_FILE, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#") or "=" not in line:
-                        continue
-
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip().strip('"').strip("'")
-
-                    if key == "DASHBOARD_URL":
-                        DASHBOARD_URL = value.rstrip("/")
-                    elif key in ("API_TOKEN", "ROVER_TOKEN"):
-                        API_TOKEN = value
-                    elif key == "ROVER_ID":
-                        ROVER_ID = value
-                    elif key == "STREAM_URL":
-                        STREAM_URL = value
-                    elif key == "STREAM_PUBLIC_URL":
-                        STREAM_PUBLIC_URL = value
-                        PUBLIC_STREAM_URL = value
-                    elif key in ("ROVER_IP", "PI_IP"):
-                        ROVER_IP = value
-                    elif key == "STREAM_PORT":
-                        STREAM_PORT = value
-                    elif key == "STREAM_ENABLED":
-                        STREAM_ENABLED = value.lower() != "false"
-        except Exception as e:
-            print(f"[DASHBOARD] Failed to read {ENV_FILE}: {e}")
+    DASHBOARD_URL = config_value("DASHBOARD_URL", DASHBOARD_URL).rstrip("/")
+    API_TOKEN = config_value("API_TOKEN", config_value("ROVER_TOKEN", API_TOKEN))
+    ROVER_ID = config_value("ROVER_ID", ROVER_ID)
+    STREAM_URL = config_value("STREAM_URL", STREAM_URL).strip()
+    STREAM_PUBLIC_URL = config_value("STREAM_PUBLIC_URL", STREAM_PUBLIC_URL).strip()
+    PUBLIC_STREAM_URL = STREAM_PUBLIC_URL
+    ROVER_IP = config_value("ROVER_IP", config_value("PI_IP", ROVER_IP)).strip()
+    STREAM_PORT = config_value("STREAM_PORT", STREAM_PORT).strip()
+    STREAM_ENABLED = config_bool("STREAM_ENABLED", STREAM_ENABLED)
 
     if DASHBOARD_URL and API_TOKEN and ROVER_ID:
         print(f"[DASHBOARD] Config loaded: {DASHBOARD_URL}, rover {ROVER_ID}")
@@ -325,7 +383,7 @@ def send_heartbeat():
             dashboard_api_url("/rover/heartbeat"),
             json={},
             headers=dashboard_headers(content_type=True),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code not in (200, 201):
             print(f"[DASHBOARD] Heartbeat failed: {response.status_code}")
@@ -338,7 +396,7 @@ def fetch_pending_commands():
         response = dashboard_session.get(
             dashboard_api_url("/rover/commands/pending"),
             headers=dashboard_headers(),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
             return response.json().get("commands", [])
@@ -363,7 +421,7 @@ def mark_command_complete(cmd_id, status, message):
             dashboard_api_url(f"/rover/commands/{cmd_id}/complete"),
             json=payload,
             headers=dashboard_headers(content_type=True),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code not in (200, 201):
             print(f"[DASHBOARD] Complete failed for command {cmd_id}: {response.status_code} {response.text[:160]}")
@@ -380,7 +438,7 @@ def update_stream_url(stream_url: str) -> bool:
             dashboard_api_url("/rover/settings"),
             json={"stream_url": stream_url},
             headers=dashboard_headers(content_type=True),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code in (200, 201):
             print(f"[DASHBOARD] Stream URL updated: {stream_url}")
@@ -408,7 +466,7 @@ def update_rover_network_info(stream_url: str, ip_address: str, stream_port: int
             dashboard_api_url("/rover/settings"),
             json=payload,
             headers=dashboard_headers(content_type=True),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code in (200, 201):
             print(f"[DASHBOARD] Network info updated: {ip_address}:{stream_port} -> {stream_url}")
@@ -567,11 +625,11 @@ def send_telemetry(telemetry_type: str, data: Dict[str, Any]) -> bool:
             "data": data,
             "recorded_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         }
-        response = dashboard_session.post(
+        response = telemetry_session.post(
             dashboard_api_url("/telemetry"),
             json=payload,
             headers=dashboard_headers(content_type=True),
-            timeout=5,
+            timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code in (200, 201):
             return True
@@ -840,24 +898,28 @@ def dashboard_poll_loop():
         return
 
     last_heartbeat_time = 0.0
-    last_telemetry_time = 0.0
 
     while not shutdown_event.is_set():
         now = time.time()
-
-        if now - last_heartbeat_time >= HEARTBEAT_INTERVAL:
-            send_heartbeat()
-            last_heartbeat_time = now
-
-        if now - last_telemetry_time >= TELEMETRY_INTERVAL:
-            collect_and_send_tracking_data()
-            last_telemetry_time = now
 
         commands = fetch_pending_commands()
         for cmd in commands:
             handle_dashboard_command(cmd)
 
+        if now - last_heartbeat_time >= HEARTBEAT_INTERVAL:
+            send_heartbeat()
+            last_heartbeat_time = now
+
         shutdown_event.wait(COMMAND_POLL_INTERVAL)
+
+
+def dashboard_telemetry_loop():
+    if not dashboard_configured():
+        return
+
+    while not shutdown_event.is_set():
+        collect_and_send_tracking_data()
+        shutdown_event.wait(TELEMETRY_INTERVAL)
 
 
 # ---------------- ORIGINAL HELPERS ----------------
@@ -1160,6 +1222,7 @@ def open_camera():
         cam = cv2.VideoCapture(camera_index, cv2.CAP_V4L2)
         cam.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_W)
         cam.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_H)
+        cam.set(cv2.CAP_PROP_FPS, CAMERA_FPS)
         cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         cam.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
@@ -1170,6 +1233,58 @@ def open_camera():
         cam.release()
 
     raise RuntimeError(f"Failed to open camera. Tried indexes: {camera_indexes}")
+
+
+class LatestFrameCamera:
+    """Continuously drains the camera and exposes only the freshest frame."""
+
+    def __init__(self, capture):
+        self.capture = capture
+        self.lock = threading.Lock()
+        self.frame = None
+        self.seq = 0
+        self.fail_count = 0
+        self.thread = threading.Thread(target=self._read_loop, daemon=True)
+
+    def start(self):
+        self.thread.start()
+        print("[CAMERA] Latest-frame reader started.")
+
+    def _read_loop(self):
+        min_interval = 1.0 / CAMERA_READ_THROTTLE_FPS if CAMERA_READ_THROTTLE_FPS > 0 else 0.0
+
+        while not shutdown_event.is_set():
+            read_started = time.time()
+            ret, frame = self.capture.read()
+
+            if ret and frame is not None:
+                with self.lock:
+                    self.frame = frame
+                    self.seq += 1
+                    self.fail_count = 0
+                update_latest_frame(frame)
+            else:
+                with self.lock:
+                    self.fail_count += 1
+                shutdown_event.wait(0.02)
+
+            elapsed = time.time() - read_started
+            delay = max(0.0, min_interval - elapsed)
+            if delay > 0:
+                shutdown_event.wait(delay)
+
+    def read(self, last_seq=None, timeout=CAMERA_READ_TIMEOUT):
+        deadline = time.time() + max(0.0, timeout)
+
+        while not shutdown_event.is_set():
+            with self.lock:
+                if self.frame is not None and self.seq != last_seq:
+                    return True, self.frame.copy(), self.seq
+
+            if time.time() >= deadline:
+                return False, None, last_seq
+
+            shutdown_event.wait(0.005)
 
 
 def get_turn_command_by_section(tx, frame_w, deadzone_width):
@@ -1220,6 +1335,7 @@ def print_status(now):
     height_txt = "None" if smooth_height is None else str(int(smooth_height))
     target_txt = "None" if target_track_id is None else str(target_track_id)
     pulse_txt = f"{pulse_duration:.3f}s" if pulse_duration > 0 else "0.000s"
+    fps_txt = f"{loop_fps_ewma:.1f}" if loop_fps_ewma > 0 else "0.0"
 
     with manual_lock:
         mode_txt = "MANUAL" if manual_mode_enabled else "AUTO"
@@ -1232,6 +1348,7 @@ def print_status(now):
         f"Target: {target_txt} | "
         f"Height: {height_txt} | "
         f"Action: {last_action} | "
+        f"FPS: {fps_txt} | "
         f"Pulse: {pulse_txt} | "
         f"Stable: {target_stable_count}/{POST_LOCK_STABLE_FRAMES}"
     )
@@ -1240,15 +1357,45 @@ def print_status(now):
 # ---------------- DASHBOARD FRAME RELAY ----------------
 
 def update_latest_frame(frame):
-    """Encode the most recent camera frame for the publisher thread."""
-    global latest_frame_jpeg
+    """Store a lightweight frame snapshot for the publisher thread."""
+    global latest_stream_frame, latest_stream_frame_seq, last_stream_frame_capture_time
 
-    success, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, STREAM_JPEG_QUALITY])
-    if not success:
+    if not (STREAM_ENABLED and dashboard_configured()):
         return
 
+    now = time.time()
+    if STREAM_CAPTURE_FPS > 0:
+        min_interval = 1.0 / STREAM_CAPTURE_FPS
+    else:
+        min_interval = 0.0
+
+    if min_interval > 0 and (now - last_stream_frame_capture_time) < min_interval:
+        return
+
+    last_stream_frame_capture_time = now
     with latest_frame_lock:
-        latest_frame_jpeg = encoded.tobytes()
+        latest_stream_frame = frame.copy()
+        latest_stream_frame_seq += 1
+
+
+def encode_stream_frame(frame) -> Optional[bytes]:
+    output = frame
+
+    if STREAM_FRAME_WIDTH > 0 and output.shape[1] > STREAM_FRAME_WIDTH:
+        ratio = STREAM_FRAME_WIDTH / float(output.shape[1])
+        target_h = STREAM_FRAME_HEIGHT if STREAM_FRAME_HEIGHT > 0 else int(output.shape[0] * ratio)
+        output = cv2.resize(output, (STREAM_FRAME_WIDTH, target_h), interpolation=cv2.INTER_AREA)
+    elif STREAM_FRAME_HEIGHT > 0 and output.shape[0] > STREAM_FRAME_HEIGHT:
+        ratio = STREAM_FRAME_HEIGHT / float(output.shape[0])
+        target_w = int(output.shape[1] * ratio)
+        output = cv2.resize(output, (target_w, STREAM_FRAME_HEIGHT), interpolation=cv2.INTER_AREA)
+
+    quality = int(clamp(STREAM_JPEG_QUALITY, 20, 95))
+    success, encoded = cv2.imencode(".jpg", output, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not success:
+        return None
+
+    return encoded.tobytes()
 
 
 def stream_publish_loop():
@@ -1258,10 +1405,13 @@ def stream_publish_loop():
     dashboard caches the latest frame and serves it to browsers as MJPEG via
     /rover/stream.
     """
-    interval = 1.0 / max(1.0, STREAM_PUBLISH_FPS)
+    global latest_stream_jpeg, latest_stream_jpeg_seq
+
+    interval = 1.0 / STREAM_PUBLISH_FPS if STREAM_PUBLISH_FPS > 0 else 0.0
     last_logged_failure = 0.0
     last_logged_success = 0.0
     consecutive_failures = 0
+    last_published_seq = -1
 
     while not shutdown_event.is_set():
         if not (STREAM_ENABLED and dashboard_configured()):
@@ -1269,15 +1419,32 @@ def stream_publish_loop():
             continue
 
         with latest_frame_lock:
-            frame_bytes = latest_frame_jpeg
+            frame = latest_stream_frame
+            frame_seq = latest_stream_frame_seq
+            cached_jpeg = latest_stream_jpeg if latest_stream_jpeg_seq == latest_stream_frame_seq else None
 
-        if frame_bytes is None:
-            shutdown_event.wait(0.1)
+        if frame is None:
+            shutdown_event.wait(0.005)
             continue
 
+        if frame_seq == last_published_seq and not STREAM_RESEND_STALE_FRAMES:
+            shutdown_event.wait(0.005)
+            continue
+
+        frame_bytes = cached_jpeg if cached_jpeg is not None else encode_stream_frame(frame)
+        if frame_bytes is None:
+            shutdown_event.wait(0.005)
+            continue
+
+        if cached_jpeg is None:
+            with latest_frame_lock:
+                latest_stream_jpeg = frame_bytes
+                latest_stream_jpeg_seq = frame_seq
+
+        last_published_seq = frame_seq
         upload_started = time.time()
         try:
-            response = dashboard_session.post(
+            response = stream_session.post(
                 dashboard_api_url("/rover/frame"),
                 data=frame_bytes,
                 headers={
@@ -1290,7 +1457,7 @@ def stream_publish_loop():
                 timeout=(STREAM_CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
             )
             elapsed = time.time() - upload_started
-            if response.status_code in (200, 201):
+            if response.status_code in (200, 201, 204):
                 consecutive_failures = 0
                 if time.time() - last_logged_success > 30:
                     print(f"[STREAM] Frame uploaded ({len(frame_bytes)} B in {elapsed*1000:.0f} ms)")
@@ -1314,14 +1481,14 @@ def stream_publish_loop():
                 print(f"[STREAM] Frame upload error: {e}")
                 last_logged_failure = time.time()
 
-        # Pace to target FPS, but never queue: while we were uploading the
-        # capture loop already overwrote latest_frame_jpeg, so the next
-        # iteration just sends the freshest frame.
+        # With STREAM_PUBLISH_FPS=0, there is no artificial cap: the next
+        # upload starts as soon as the previous POST finishes.
         elapsed = time.time() - upload_started
-        delay = max(0.0, interval - elapsed)
+        delay = max(0.0, interval - elapsed) if interval > 0 else 0.0
         if consecutive_failures >= 5:
-            delay = max(delay, min(5.0, interval * 5))
-        shutdown_event.wait(delay)
+            delay = max(delay, STREAM_FAILURE_BACKOFF)
+        if delay > 0:
+            shutdown_event.wait(delay)
 
 
 def start_stream_publisher():
@@ -1330,14 +1497,20 @@ def start_stream_publisher():
         return
 
     threading.Thread(target=stream_publish_loop, daemon=True).start()
-    fps = max(1.0, STREAM_PUBLISH_FPS)
-    print(f"[STREAM] Frame publisher started (target ~{fps:.0f} fps to dashboard).")
+    if STREAM_PUBLISH_FPS > 0:
+        print(f"[STREAM] Frame publisher started (target ~{STREAM_PUBLISH_FPS:.0f} fps to dashboard).")
+    else:
+        print("[STREAM] Frame publisher started (uncapped best-effort to dashboard).")
 
 
 # ---------------- STARTUP ----------------
 load_dashboard_config()
 open_serial()
 cap = open_camera()
+camera_reader = None
+if CAMERA_THREADED:
+    camera_reader = LatestFrameCamera(cap)
+    camera_reader.start()
 send_indicator("FREE")
 start_stream_publisher()
 
@@ -1358,14 +1531,21 @@ if dashboard_configured() and relay_marker:
 
 dashboard_thread = threading.Thread(target=dashboard_poll_loop, daemon=True)
 dashboard_thread.start()
+telemetry_thread = threading.Thread(target=dashboard_telemetry_loop, daemon=True)
+telemetry_thread.start()
 if dashboard_configured():
-    print("[DASHBOARD] Command polling thread started.")
+    print("[DASHBOARD] Command polling and telemetry threads started.")
 
 
 # ---------------- MAIN LOOP ----------------
+last_camera_seq = None
 try:
     while True:
-        ret, frame = cap.read()
+        if camera_reader is not None:
+            ret, frame, last_camera_seq = camera_reader.read(last_camera_seq)
+        else:
+            ret, frame = cap.read()
+
         if not ret or frame is None:
             camera_fail_count += 1
             if camera_fail_count >= MAX_CAMERA_FAILS:
@@ -1377,8 +1557,15 @@ try:
         now = time.time()
         h, w = frame.shape[:2]
         frame_count += 1
-        update_latest_frame(frame)
-
+        if last_loop_time > 0:
+            loop_dt = max(0.001, now - last_loop_time)
+            instant_fps = 1.0 / loop_dt
+            loop_fps_ewma = instant_fps if loop_fps_ewma <= 0 else (
+                (0.90 * loop_fps_ewma) + (0.10 * instant_fps)
+            )
+        last_loop_time = now
+        if camera_reader is None:
+            update_latest_frame(frame)
 
         if apply_manual_override(now):
             update_indicator_state(now)
@@ -1399,6 +1586,8 @@ try:
                 classes=[0],
                 conf=PERSON_CONF,
                 imgsz=YOLO_IMGSZ,
+                max_det=YOLO_MAX_DET,
+                tracker=TRACKER_CONFIG,
                 verbose=False,
             )[0]
 

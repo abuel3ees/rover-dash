@@ -11,8 +11,8 @@ class StreamController extends Controller
 {
     private const MAX_STREAM_SECONDS = 1800;
     private const FRAME_FRESH_SECONDS = 3;
-    private const POLL_MICROS_NEW = 15_000;
-    private const POLL_MICROS_IDLE = 100_000;
+    private const POLL_MICROS_NEW = 5_000;
+    private const POLL_MICROS_IDLE = 50_000;
 
     public function health(Request $request): JsonResponse
     {
@@ -23,18 +23,21 @@ class StreamController extends Controller
         }
 
         $path = FrameController::framePath($rover->id);
-        clearstatcache(true, $path);
+        $metaPath = FrameController::frameMetaPath($rover->id);
+        $meta = $this->readFrameMeta($metaPath);
 
         if (!file_exists($path)) {
             return response()->json(['status' => 'error', 'message' => 'No frames received yet'], 404);
         }
 
-        $age = time() - filemtime($path);
+        clearstatcache(true, $path);
+        $age = $meta ? microtime(true) - $meta['timestamp'] : time() - filemtime($path);
+        $bytes = $meta['bytes'] ?? filesize($path);
 
         return response()->json([
             'status' => $age <= self::FRAME_FRESH_SECONDS ? 'ok' : 'stale',
-            'age_seconds' => $age,
-            'bytes' => filesize($path),
+            'age_seconds' => round($age, 3),
+            'bytes' => $bytes,
         ]);
     }
 
@@ -44,36 +47,42 @@ class StreamController extends Controller
         abort_unless($rover, 404);
 
         $path = FrameController::framePath($rover->id);
+        $metaPath = FrameController::frameMetaPath($rover->id);
 
         @set_time_limit(0);
         @ignore_user_abort(false);
 
-        return new StreamedResponse(function () use ($path) {
+        return new StreamedResponse(function () use ($path, $metaPath) {
             while (ob_get_level() > 0) {
                 ob_end_flush();
             }
 
             $startedAt = time();
-            $lastMtime = 0;
+            $lastMarker = '';
 
             while (!connection_aborted()) {
                 if (time() - $startedAt > self::MAX_STREAM_SECONDS) {
                     return;
                 }
 
-                clearstatcache(true, $path);
-                if (!file_exists($path)) {
+                if (!is_file($path)) {
                     usleep(self::POLL_MICROS_IDLE);
                     continue;
                 }
 
-                $mtime = filemtime($path);
-                if ($mtime === $lastMtime) {
+                $marker = is_file($metaPath) ? trim((string) @file_get_contents($metaPath)) : '';
+                if ($marker === '') {
+                    usleep(self::POLL_MICROS_IDLE);
+                    continue;
+                }
+
+                if ($marker === $lastMarker) {
                     usleep(self::POLL_MICROS_NEW);
                     continue;
                 }
 
-                if (time() - $mtime > self::FRAME_FRESH_SECONDS) {
+                $meta = $this->parseFrameMeta($marker);
+                if ($meta && microtime(true) - $meta['timestamp'] > self::FRAME_FRESH_SECONDS) {
                     usleep(self::POLL_MICROS_IDLE);
                     continue;
                 }
@@ -84,7 +93,7 @@ class StreamController extends Controller
                     continue;
                 }
 
-                $lastMtime = $mtime;
+                $lastMarker = $marker;
 
                 echo "--frame\r\n";
                 echo "Content-Type: image/jpeg\r\n";
@@ -99,6 +108,30 @@ class StreamController extends Controller
             'Cache-Control' => 'no-cache, no-store, must-revalidate',
             'Pragma' => 'no-cache',
             'X-Accel-Buffering' => 'no',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
+    }
+
+    private function readFrameMeta(string $path): ?array
+    {
+        if (!is_file($path)) {
+            return null;
+        }
+
+        return $this->parseFrameMeta(trim((string) @file_get_contents($path)));
+    }
+
+    private function parseFrameMeta(string $marker): ?array
+    {
+        $parts = explode('|', $marker);
+        if (count($parts) < 2 || !is_numeric($parts[0]) || !is_numeric($parts[1])) {
+            return null;
+        }
+
+        return [
+            'timestamp' => (float) $parts[0],
+            'bytes' => (int) $parts[1],
+            'marker' => $marker,
+        ];
     }
 }
