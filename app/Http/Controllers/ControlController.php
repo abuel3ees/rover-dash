@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\CommandSent;
 use App\Http\Requests\StoreCommandRequest;
 use App\Models\Command;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,7 +42,7 @@ class ControlController extends Controller
         ]);
     }
 
-    public function sendCommand(StoreCommandRequest $request): RedirectResponse
+    public function sendCommand(StoreCommandRequest $request): JsonResponse|RedirectResponse
     {
         $rover = $request->user()->rover;
 

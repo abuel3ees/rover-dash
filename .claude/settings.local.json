@@ -4,7 +4,10 @@
       "Bash(npm install:*)",
       "Bash(php artisan:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(curl -s -X POST http://localhost/control/command -H 'Content-Type: application/json' -H 'Accept: application/json' -d '{\"type\":\"manual_override\",\"payload\":{}}')",
+      "Bash(curl *)",
+      "Bash(php -r \"echo opcache_get_status\\(\\) ? 'opcache enabled' : 'opcache disabled';\")"
     ]
   }
 }

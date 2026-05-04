@@ -26,7 +26,7 @@ class StoreCommandRequest extends FormRequest
                 'custom',
                 'ping',
             ])],
-            'payload' => ['required', 'array'],
+            'payload' => ['present', 'array'],
         ];
     }
 }
