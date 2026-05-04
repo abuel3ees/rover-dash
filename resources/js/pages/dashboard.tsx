@@ -261,6 +261,12 @@ export default function Dashboard({
         | TemperatureTelemetry
         | undefined;
     const gps = telemetry?.gps?.data as GpsTelemetry | undefined;
+    const gpsHasFix =
+        gps !== undefined &&
+        gps.fix === true &&
+        Number.isFinite(gps.latitude) &&
+        Number.isFinite(gps.longitude) &&
+        (gps.latitude !== 0 || gps.longitude !== 0);
     const accel = telemetry?.accelerometer?.data as
         | AccelerometerTelemetry
         | undefined;
@@ -411,11 +417,17 @@ export default function Dashboard({
                         },
                         {
                             label: 'GPS Position',
-                            value: gps ? `${gps.latitude.toFixed(4)}°` : '--',
+                            value:
+                                gpsHasFix && gps
+                                    ? `${gps.latitude.toFixed(4)}°`
+                                    : '--',
                             unit: '',
-                            sub: gps
-                                ? `${gps.longitude.toFixed(4)}° · ${gps.satellites} sats`
-                                : 'No fix',
+                            sub:
+                                gpsHasFix && gps
+                                    ? `${gps.longitude.toFixed(4)}° · ${gps.satellites} sats${gps.stale ? ' · stale' : ''}`
+                                    : gps?.reason
+                                      ? `No fix: ${gps.reason}`
+                                      : 'No fix',
                             color: 'text-sky-600 dark:text-sky-400',
                             icon: <MapPin className="size-4" />,
                             trend: undefined,
@@ -553,8 +565,14 @@ export default function Dashboard({
                                 </div>
                                 <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">
                                     <Compass
-                                        heading={gps?.heading ?? 0}
-                                        speed={gps?.speed}
+                                        heading={
+                                            gpsHasFix && gps ? gps.heading : 0
+                                        }
+                                        speed={
+                                            gpsHasFix && gps
+                                                ? gps.speed
+                                                : undefined
+                                        }
                                     />
                                 </div>
                                 <div className="flex items-center justify-center border border-border/40 bg-card/60 px-4 py-5">

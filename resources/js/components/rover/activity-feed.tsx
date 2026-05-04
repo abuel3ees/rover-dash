@@ -182,7 +182,9 @@ export function ActivityFeed({ commands, telemetry }: ActivityFeedProps) {
                                 {tel.type === 'temperature' &&
                                     `${telData.cpu_temp}°C`}
                                 {tel.type === 'gps' &&
-                                    `${(telData.latitude as number)?.toFixed(4)}, ${(telData.longitude as number)?.toFixed(4)}`}
+                                    (telData.fix === false
+                                        ? 'No fix'
+                                        : `${(telData.latitude as number)?.toFixed(4)}, ${(telData.longitude as number)?.toFixed(4)}`)}
                                 {tel.type === 'accelerometer' &&
                                     `P:${(telData.pitch as number)?.toFixed(1)}°`}
                             </span>

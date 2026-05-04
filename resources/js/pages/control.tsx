@@ -67,13 +67,10 @@ export default function Control({
         is_online: rover.is_online,
     });
     const latestModeCommand = recentCommands.find((command) =>
-        ['manual_override', 'auto_follow', 'stop'].includes(command.type),
+        ['manual_override', 'auto_follow'].includes(command.type),
     );
     const [controlMode, setControlMode] = useState<ControlMode>(
-        latestModeCommand?.type === 'manual_override' ||
-            latestModeCommand?.type === 'stop'
-            ? 'manual'
-            : 'automatic',
+        latestModeCommand?.type === 'manual_override' ? 'manual' : 'automatic',
     );
     const speedRef = useRef(50);
     const browserStreamUrl = resolveBrowserStreamUrl(rover);
@@ -98,10 +95,11 @@ export default function Control({
     }, []);
 
     const handleCommandCompleted = useCallback((data: CommandPayload) => {
-        if (data.type === 'manual_override' || data.type === 'stop') {
+        // Mode is set optimistically on click — don't override it here, as
+        // late-completing commands (e.g. a prior stop) would race and revert.
+        // Only revert to manual if auto_follow explicitly failed on the Pi.
+        if (data.type === 'auto_follow' && data.status === 'failed') {
             setControlMode('manual');
-        } else if (data.type === 'auto_follow') {
-            setControlMode('automatic');
         }
 
         setCommands((prev) =>

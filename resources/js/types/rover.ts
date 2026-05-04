@@ -35,6 +35,12 @@ export type GpsTelemetry = {
     speed: number;
     heading: number;
     satellites: number;
+    accuracy?: number;
+    fix?: boolean;
+    stale?: boolean;
+    age_seconds?: number;
+    source?: string;
+    reason?: string;
 };
 
 export type BatteryTelemetry = {
