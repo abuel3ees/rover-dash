@@ -111,23 +111,6 @@ TELEMETRY_INTERVAL = config_float("TELEMETRY_INTERVAL", 60.0)
 MANUAL_MOVE_HOLD_SECONDS = config_float("MANUAL_MOVE_HOLD_SECONDS", 0.6)
 MANUAL_STOP_HOLD_SECONDS = config_float("MANUAL_STOP_HOLD_SECONDS", 0.25)
 
-GPS_ENABLED = config_bool("GPS_ENABLED", "true")
-GPS_SOURCE = config_value("GPS_SOURCE", "auto").strip().lower()
-GPSD_HOST = config_value("GPSD_HOST", "127.0.0.1").strip()
-GPSD_PORT = config_int("GPSD_PORT", 2947)
-GPS_READ_TIMEOUT = config_float("GPS_READ_TIMEOUT", 3.0)
-GPS_STALE_SECONDS = config_float("GPS_STALE_SECONDS", 120.0)
-GPS_SERIAL_PORTS = tuple(
-    port.strip()
-    for port in config_value(
-        "GPS_SERIAL_PORTS",
-        config_value("GPS_SERIAL_PORT", "/dev/serial0,/dev/ttyAMA0,/dev/ttyS0"),
-    ).split(",")
-    if port.strip()
-)
-GPS_SERIAL_BAUD = config_int("GPS_SERIAL_BAUD", 9600)
-GPS_LOG_INTERVAL = config_float("GPS_LOG_INTERVAL", 30.0)
-
 STREAM_URL = config_value("STREAM_URL", "").strip()
 STREAM_ENABLED = config_bool("STREAM_ENABLED", "true")
 STREAM_MODE = config_value("STREAM_MODE", "relay").strip().lower()
@@ -280,11 +263,11 @@ last_stream_frame_capture_time = 0.0
 STREAM_PUBLISH_FPS = config_float("STREAM_PUBLISH_FPS", 0)
 STREAM_CAPTURE_FPS = config_float("STREAM_CAPTURE_FPS", STREAM_PUBLISH_FPS)
 STREAM_CONNECT_TIMEOUT = config_float("STREAM_CONNECT_TIMEOUT", 1.0)
-STREAM_READ_TIMEOUT = config_float("STREAM_READ_TIMEOUT", 1.0)
-STREAM_JPEG_QUALITY = config_int("STREAM_JPEG_QUALITY", 30)
-STREAM_FRAME_WIDTH = config_int("STREAM_FRAME_WIDTH", 320)
+STREAM_READ_TIMEOUT = config_float("STREAM_READ_TIMEOUT", 2.0)
+STREAM_JPEG_QUALITY = config_int("STREAM_JPEG_QUALITY", 55)
+STREAM_FRAME_WIDTH = config_int("STREAM_FRAME_WIDTH", FRAME_W)
 STREAM_FRAME_HEIGHT = config_int("STREAM_FRAME_HEIGHT", 0)
-STREAM_RESEND_STALE_FRAMES = config_bool("STREAM_RESEND_STALE_FRAMES", "false")
+STREAM_RESEND_STALE_FRAMES = config_bool("STREAM_RESEND_STALE_FRAMES", "true")
 STREAM_FAILURE_BACKOFF = config_float("STREAM_FAILURE_BACKOFF", 0.25)
 
 HLS_OUTPUT_DIR = Path(config_value("HLS_OUTPUT_DIR", "/tmp/rover-hls"))
@@ -307,12 +290,6 @@ latest_hls_frame = None
 latest_hls_frame_seq = 0
 last_hls_frame_time = 0.0
 hls_upload_state: Dict[str, Tuple[float, int]] = {}
-
-# GPS state
-gps_cache_lock = threading.Lock()
-gps_last_fix: Optional[Dict[str, Any]] = None
-gps_last_fix_time = 0.0
-gps_last_warning_time = 0.0
 
 # ---------------- MODELS ----------------
 cv2.setUseOptimized(True)
@@ -639,352 +616,44 @@ def get_battery_data() -> Dict[str, Any]:
     return battery_info
 
 
-def gps_no_fix(reason: str, source: Optional[str] = None) -> Dict[str, Any]:
-    return {
-        "latitude": 0.0,
-        "longitude": 0.0,
-        "altitude": 0.0,
-        "speed": 0.0,
-        "heading": 0.0,
-        "satellites": 0,
-        "accuracy": 0.0,
-        "fix": False,
-        "source": source or GPS_SOURCE,
-        "reason": reason,
-    }
-
-
-def gps_float(value: Any, default: float = 0.0) -> float:
-    try:
-        if value is None or value == "":
-            return default
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def gps_int(value: Any, default: int = 0) -> int:
-    try:
-        if value is None or value == "":
-            return default
-        return int(float(value))
-    except (TypeError, ValueError):
-        return default
-
-
-def gps_satellite_count(sky_report: Dict[str, Any]) -> int:
-    satellites = sky_report.get("satellites")
-    if isinstance(satellites, list):
-        used = sum(1 for sat in satellites if isinstance(sat, dict) and sat.get("used"))
-        return used or len(satellites)
-
-    for key in ("uSat", "nSat", "satellites"):
-        if key in sky_report:
-            return gps_int(sky_report.get(key), 0)
-
-    return 0
-
-
-def gps_accuracy_from_report(report: Dict[str, Any], fallback: float = 0.0) -> float:
-    for key in ("eph", "epx", "epy", "hdop"):
-        if report.get(key) is not None:
-            return gps_float(report.get(key), fallback)
-    return fallback
-
-
-def build_gps_fix(
-    latitude: Any,
-    longitude: Any,
-    *,
-    source: str,
-    altitude: Any = 0.0,
-    speed: Any = 0.0,
-    heading: Any = 0.0,
-    satellites: Any = 0,
-    accuracy: Any = 0.0,
-    mode: Any = None,
-    timestamp: Any = None,
-) -> Optional[Dict[str, Any]]:
-    if latitude is None or longitude is None:
-        return None
-
-    lat = gps_float(latitude)
-    lon = gps_float(longitude)
-    if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
-        return None
-
-    fix = {
-        "latitude": lat,
-        "longitude": lon,
-        "altitude": gps_float(altitude),
-        "speed": gps_float(speed),
-        "heading": gps_float(heading),
-        "satellites": gps_int(satellites),
-        "accuracy": gps_float(accuracy),
-        "fix": True,
-        "stale": False,
-        "source": source,
-    }
-
-    if mode is not None:
-        fix["mode"] = gps_int(mode)
-    if timestamp:
-        fix["timestamp"] = timestamp
-
-    return fix
-
-
-def cache_gps_fix(fix: Dict[str, Any]):
-    global gps_last_fix, gps_last_fix_time
-
-    with gps_cache_lock:
-        gps_last_fix = fix.copy()
-        gps_last_fix_time = time.time()
-
-
-def get_cached_gps_data(reason: str) -> Dict[str, Any]:
-    with gps_cache_lock:
-        if gps_last_fix and (time.time() - gps_last_fix_time) <= GPS_STALE_SECONDS:
-            cached = gps_last_fix.copy()
-            cached["stale"] = True
-            cached["age_seconds"] = round(time.time() - gps_last_fix_time, 1)
-            cached["reason"] = reason
-            return cached
-
-    return gps_no_fix(reason)
-
-
-def log_gps_warning(message: str):
-    global gps_last_warning_time
-
-    now = time.time()
-    if (now - gps_last_warning_time) < GPS_LOG_INTERVAL:
-        return
-
-    gps_last_warning_time = now
-    print(f"[GPS] {message}")
-
-
-def gps_fix_from_tpv(report: Dict[str, Any], satellites: int = 0, accuracy: float = 0.0) -> Optional[Dict[str, Any]]:
-    mode = gps_int(report.get("mode"), 0)
-    if mode and mode < 2:
-        return None
-
-    return build_gps_fix(
-        report.get("lat"),
-        report.get("lon"),
-        source="gpsd",
-        altitude=report.get("altHAE", report.get("altMSL", report.get("alt", 0.0))),
-        speed=report.get("speed", 0.0),
-        heading=report.get("track", 0.0),
-        satellites=report.get("satellites", satellites),
-        accuracy=gps_accuracy_from_report(report, accuracy),
-        mode=mode,
-        timestamp=report.get("time"),
-    )
-
-
-def handle_gpsd_report(report: Dict[str, Any], satellites: int, accuracy: float) -> Tuple[Optional[Dict[str, Any]], int, float]:
-    report_class = report.get("class")
-
-    if report_class == "SKY":
-        satellites = gps_satellite_count(report)
-        accuracy = gps_accuracy_from_report(report, accuracy)
-        return None, satellites, accuracy
-
-    if report_class == "TPV":
-        return gps_fix_from_tpv(report, satellites, accuracy), satellites, accuracy
-
-    if report_class == "POLL":
-        for sky_report in report.get("sky", []) or []:
-            if isinstance(sky_report, dict):
-                _, satellites, accuracy = handle_gpsd_report(sky_report, satellites, accuracy)
-
-        for tpv_report in report.get("tpv", []) or []:
-            if not isinstance(tpv_report, dict):
-                continue
-            fix = gps_fix_from_tpv(tpv_report, satellites, accuracy)
-            if fix is not None:
-                return fix, satellites, accuracy
-
-    return None, satellites, accuracy
-
-
-def read_gpsd_data() -> Tuple[Optional[Dict[str, Any]], str]:
-    buffer = ""
-    satellites = 0
-    accuracy = 0.0
-    deadline = time.time() + max(0.5, GPS_READ_TIMEOUT)
-
-    try:
-        connect_timeout = max(0.5, min(2.0, GPS_READ_TIMEOUT))
-        with socket.create_connection((GPSD_HOST, GPSD_PORT), timeout=connect_timeout) as sock:
-            sock.settimeout(0.5)
-            sock.sendall(b'?WATCH={"enable":true,"json":true};\n')
-            sock.sendall(b"?POLL;\n")
-
-            while time.time() < deadline:
-                try:
-                    chunk = sock.recv(4096)
-                except socket.timeout:
-                    continue
-
-                if not chunk:
-                    break
-
-                buffer += chunk.decode("utf-8", errors="ignore")
-                while "\n" in buffer:
-                    line, buffer = buffer.split("\n", 1)
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    try:
-                        report = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-
-                    fix, satellites, accuracy = handle_gpsd_report(report, satellites, accuracy)
-                    if fix is not None:
-                        return fix, "ok"
-
-    except ConnectionRefusedError:
-        return None, "gpsd_not_running"
-    except socket.timeout:
-        return None, "gpsd_timeout"
-    except OSError as e:
-        return None, f"gpsd_error:{e}"
-
-    return None, "gpsd_no_fix"
-
-
-def parse_nmea_coordinate(raw_value: str, hemisphere: str) -> Optional[float]:
-    if not raw_value or not hemisphere:
-        return None
-
-    degree_digits = 2 if hemisphere in ("N", "S") else 3
-    if len(raw_value) <= degree_digits:
-        return None
-
-    degrees = gps_float(raw_value[:degree_digits])
-    minutes = gps_float(raw_value[degree_digits:])
-    coordinate = degrees + (minutes / 60.0)
-
-    if hemisphere in ("S", "W"):
-        coordinate *= -1
-
-    return coordinate
-
-
-def parse_nmea_sentence(line: str) -> Optional[Dict[str, Any]]:
-    sentence = line.strip()
-    if not sentence.startswith("$"):
-        return None
-
-    sentence = sentence.split("*", 1)[0]
-    parts = sentence.split(",")
-    if not parts:
-        return None
-
-    sentence_type = parts[0][-3:]
-
-    if sentence_type == "GGA" and len(parts) >= 10:
-        fix_quality = gps_int(parts[6], 0)
-        if fix_quality <= 0:
-            return None
-
-        latitude = parse_nmea_coordinate(parts[2], parts[3])
-        longitude = parse_nmea_coordinate(parts[4], parts[5])
-        return build_gps_fix(
-            latitude,
-            longitude,
-            source="nmea",
-            altitude=parts[9],
-            satellites=parts[7],
-            accuracy=parts[8],
-            mode=fix_quality,
-        )
-
-    if sentence_type == "RMC" and len(parts) >= 9:
-        if parts[2] != "A":
-            return None
-
-        latitude = parse_nmea_coordinate(parts[3], parts[4])
-        longitude = parse_nmea_coordinate(parts[5], parts[6])
-        speed_mps = gps_float(parts[7]) * 0.514444
-        return build_gps_fix(
-            latitude,
-            longitude,
-            source="nmea",
-            speed=speed_mps,
-            heading=parts[8],
-        )
-
-    return None
-
-
-def read_serial_gps_data() -> Tuple[Optional[Dict[str, Any]], str]:
-    if not GPS_SERIAL_PORTS:
-        return None, "no_serial_ports_configured"
-
-    last_reason = "serial_no_fix"
-    for port in GPS_SERIAL_PORTS:
-        gps_serial = None
-        try:
-            gps_serial = serial.Serial(port, GPS_SERIAL_BAUD, timeout=0.5)
-            deadline = time.time() + max(0.5, GPS_READ_TIMEOUT)
-
-            while time.time() < deadline:
-                raw_line = gps_serial.readline()
-                if not raw_line:
-                    continue
-
-                fix = parse_nmea_sentence(raw_line.decode("ascii", errors="ignore"))
-                if fix is not None:
-                    return fix, "ok"
-
-        except Exception as e:
-            last_reason = f"{port}:{e}"
-        finally:
-            try:
-                if gps_serial is not None:
-                    gps_serial.close()
-            except Exception:
-                pass
-
-    return None, last_reason
-
-
 def get_gps_data() -> Dict[str, Any]:
-    if not GPS_ENABLED:
-        return gps_no_fix("disabled")
+    try:
+        import socket
 
-    source = GPS_SOURCE or "auto"
-    reasons = []
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        try:
+            sock.connect(("localhost", 2947))
+            sock.send(b'?WATCH={"enable":true,"json":true}\n')
+            data = sock.recv(4096).decode(errors="ignore")
 
-    if source in ("auto", "gpsd"):
-        fix, reason = read_gpsd_data()
-        if fix is not None:
-            cache_gps_fix(fix)
-            return fix
-        reasons.append(f"gpsd:{reason}")
+            for line in data.splitlines():
+                if '"class":"TPV"' not in line:
+                    continue
+                report = json.loads(line)
+                return {
+                    "latitude": report.get("lat", 0),
+                    "longitude": report.get("lon", 0),
+                    "altitude": report.get("alt", 0),
+                    "speed": report.get("speed", 0),
+                    "heading": report.get("track", 0),
+                    "satellites": report.get("satellites", 0),
+                    "accuracy": report.get("eph", 0),
+                }
+        finally:
+            sock.close()
+    except Exception:
+        pass
 
-    if source in ("auto", "serial", "nmea"):
-        fix, reason = read_serial_gps_data()
-        if fix is not None:
-            cache_gps_fix(fix)
-            return fix
-        reasons.append(f"serial:{reason}")
-
-    reason_text = "; ".join(reasons) if reasons else f"unsupported_source:{source}"
-    data = get_cached_gps_data(reason_text)
-
-    if not data.get("fix"):
-        log_gps_warning(
-            f"No GPS fix ({reason_text}). Check gpsd, antenna lock, or set GPS_SOURCE/GPS_SERIAL_PORTS in .env."
-        )
-
-    return data
+    return {
+        "latitude": 0,
+        "longitude": 0,
+        "altitude": 0,
+        "speed": 0,
+        "heading": 0,
+        "satellites": 0,
+        "accuracy": 0,
+    }
 
 
 def send_telemetry(telemetry_type: str, data: Dict[str, Any]) -> bool:
