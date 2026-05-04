@@ -53,17 +53,11 @@ class ControlController extends Controller
             'payload' => $request->validated('payload'),
         ]);
 
-        $expireMap = [
-            'auto_follow'     => ['manual_override', 'move', 'rotate', 'speed', 'stop'],
-            'manual_override' => ['auto_follow'],
-            'stop'            => ['manual_override', 'move', 'rotate', 'speed', 'stop'],
-        ];
-
-        if (isset($expireMap[$command->type])) {
+        if (in_array($command->type, ['auto_follow', 'stop'], true)) {
             $rover->commands()
                 ->where('id', '<', $command->id)
                 ->where('status', 'pending')
-                ->whereIn('type', $expireMap[$command->type])
+                ->whereIn('type', ['manual_override', 'move', 'rotate', 'speed', 'stop'])
                 ->update(['status' => 'expired']);
         }
 

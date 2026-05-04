@@ -712,9 +712,6 @@ def build_gps_fix(
     lon = gps_float(longitude)
     if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
         return None
-    # GPS modules report 0,0 (Null Island) before acquiring a lock — reject it.
-    if lat == 0.0 and lon == 0.0:
-        return None
 
     fix = {
         "latitude": lat,

@@ -425,9 +425,9 @@ export default function Dashboard({
                             sub:
                                 gpsHasFix && gps
                                     ? `${gps.longitude.toFixed(4)}° · ${gps.satellites} sats${gps.stale ? ' · stale' : ''}`
-                                    : gps
-                                      ? `No fix · ${gps.satellites ?? 0} sats${gps.source && gps.source !== 'auto' ? ` · ${gps.source}` : ''}`
-                                      : 'No telemetry yet',
+                                    : gps?.reason
+                                      ? `No fix: ${gps.reason}`
+                                      : 'No fix',
                             color: 'text-sky-600 dark:text-sky-400',
                             icon: <MapPin className="size-4" />,
                             trend: undefined,
