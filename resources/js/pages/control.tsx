@@ -89,6 +89,9 @@ export default function Control({
             status: data.status as Rover['status'],
             is_online: data.is_online,
         });
+        if (data.is_manual_mode !== undefined) {
+            setControlMode(data.is_manual_mode ? 'manual' : 'automatic');
+        }
     }, []);
 
     const handleCommandCompleted = useCallback((data: CommandPayload) => {

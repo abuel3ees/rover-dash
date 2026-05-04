@@ -31,6 +31,7 @@ class RoverStatusChanged implements ShouldBroadcastNow
             'status' => $this->rover->status,
             'is_online' => $this->rover->isOnline(),
             'last_seen_at' => $this->rover->last_seen_at?->toISOString(),
+            'is_manual_mode' => (bool)$this->rover->is_manual_mode,
         ];
     }
 }

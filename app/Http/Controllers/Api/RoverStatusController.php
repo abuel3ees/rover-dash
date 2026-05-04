@@ -30,10 +30,16 @@ class RoverStatusController extends Controller
 
         $wasOffline = ! $rover->isOnline();
 
-        $rover->update([
+        $attributes = [
             'last_seen_at' => now(),
             'status' => 'online',
-        ]);
+        ];
+
+        if ($wasOffline) {
+            $attributes['is_manual_mode'] = false;
+        }
+
+        $rover->update($attributes);
 
         if ($wasOffline) {
             broadcast(new RoverStatusChanged($rover));
