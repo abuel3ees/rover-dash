@@ -792,7 +792,7 @@ def exit_manual_mode():
         manual_override_until = 0.0
 
     reset_autonomous_state_for_manual()
-    auto_reacquire_until = time.time() + AUTO_REACQUIRE_SECONDS
+    auto_reacquire_until = time.time() + 300.0
     send_cmd("STOP")
     send_indicator("FREE")
 

@@ -96,12 +96,6 @@ export default function Control({
     }, []);
 
     const handleCommandCompleted = useCallback((data: CommandPayload) => {
-        if (data.type === 'manual_override' || data.type === 'stop') {
-            setControlMode('manual');
-        } else if (data.type === 'auto_follow') {
-            setControlMode('automatic');
-        }
-
         setCommands((prev) =>
             prev.map((cmd) =>
                 cmd.id === data.id
