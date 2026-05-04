@@ -46,6 +46,11 @@ class ControlController extends Controller
         $rover = $request->user()->rover;
 
         abort_unless($rover, 404);
+        
+        \Log::info('ControlController sendCommand', [
+            'type' => $request->validated('type'),
+            'payload' => $request->validated('payload'),
+        ]);
 
         $command = Command::create([
             'rover_id' => $rover->id,
@@ -75,6 +80,10 @@ class ControlController extends Controller
         }
 
         broadcast(new CommandSent($command))->toOthers();
+
+        if ($request->wantsJson() || $request->isXmlHttpRequest()) {
+            return response()->json(['status' => 'ok']);
+        }
 
         return back();
     }

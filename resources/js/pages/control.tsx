@@ -1,5 +1,6 @@
 import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     Battery,
     Bot,
@@ -143,18 +144,11 @@ export default function Control({
 
     function sendCommand(
         type: string,
-        payload: Record<string, FormDataConvertible>,
+        payload: Record<string, any>,
     ) {
-        router.post(
-            '/control/command',
-            { type, payload },
-            {
-                async: true,
-                preserveScroll: true,
-                preserveState: true,
-                showProgress: false,
-            },
-        );
+        axios.post('/control/command', { type, payload }).catch((err) => {
+            console.error('Command failed to send:', err);
+        });
     }
 
     function handleManualOverride() {
