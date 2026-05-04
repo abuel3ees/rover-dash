@@ -62,10 +62,16 @@ class ControlController extends Controller
                 ->update(['status' => 'expired']);
         }
 
+        $previousManualMode = $rover->is_manual_mode;
+
         if (in_array($command->type, ['manual_override', 'move', 'rotate', 'speed', 'stop'])) {
             $rover->update(['is_manual_mode' => true]);
         } elseif ($command->type === 'auto_follow') {
             $rover->update(['is_manual_mode' => false]);
+        }
+
+        if ($previousManualMode !== $rover->is_manual_mode) {
+            broadcast(new \App\Events\RoverStatusChanged($rover))->toOthers();
         }
 
         broadcast(new CommandSent($command))->toOthers();

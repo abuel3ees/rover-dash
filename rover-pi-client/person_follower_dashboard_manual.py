@@ -433,6 +433,7 @@ def send_heartbeat():
 
 
 def fetch_pending_commands():
+    global manual_mode_enabled
     try:
         response = dashboard_session.get(
             dashboard_api_url("/rover/commands/pending"),
@@ -442,11 +443,14 @@ def fetch_pending_commands():
         if response.status_code == 200:
             data = response.json()
             is_manual_mode = data.get("is_manual_mode", False)
-            global manual_mode_enabled
-            if is_manual_mode and not manual_mode_enabled:
+            
+            with manual_lock:
+                curr_manual_state = manual_mode_enabled
+
+            if is_manual_mode and not curr_manual_state:
                 print("[DASHBOARD] Database indicates manual mode is enabled. Switching to manual.")
                 enter_manual_mode()
-            elif not is_manual_mode and manual_mode_enabled:
+            elif not is_manual_mode and curr_manual_state:
                 print("[DASHBOARD] Database indicates manual mode is disabled. Switching to automatic.")
                 exit_manual_mode()
             
