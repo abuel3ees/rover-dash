@@ -66,14 +66,8 @@ export default function Control({
         status: rover.status,
         is_online: rover.is_online,
     });
-    const latestModeCommand = recentCommands.find((command) =>
-        ['manual_override', 'auto_follow', 'stop'].includes(command.type),
-    );
     const [controlMode, setControlMode] = useState<ControlMode>(
-        latestModeCommand?.type === 'manual_override' ||
-            latestModeCommand?.type === 'stop'
-            ? 'manual'
-            : 'automatic',
+        rover.is_manual_mode ? 'manual' : 'automatic'
     );
     const speedRef = useRef(50);
     const browserStreamUrl = resolveBrowserStreamUrl(rover);

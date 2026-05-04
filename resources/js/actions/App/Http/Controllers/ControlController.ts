@@ -82,7 +82,7 @@ index.form = indexForm
 
 /**
 * @see \App\Http\Controllers\ControlController::sendCommand
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 export const sendCommand = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -97,7 +97,7 @@ sendCommand.definition = {
 
 /**
 * @see \App\Http\Controllers\ControlController::sendCommand
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 sendCommand.url = (options?: RouteQueryOptions) => {
@@ -106,7 +106,7 @@ sendCommand.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ControlController::sendCommand
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 sendCommand.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -116,7 +116,7 @@ sendCommand.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\ControlController::sendCommand
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 const sendCommandForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -126,7 +126,7 @@ const sendCommandForm = (options?: RouteQueryOptions): RouteFormDefinition<'post
 
 /**
 * @see \App\Http\Controllers\ControlController::sendCommand
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 sendCommandForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({

@@ -12,6 +12,7 @@ export type Rover = {
     hardware_info: Record<string, unknown> | null;
     last_seen_at: string | null;
     is_online: boolean;
+    is_manual_mode: boolean;
     created_at: string;
     updated_at: string;
 };

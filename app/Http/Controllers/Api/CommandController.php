@@ -36,6 +36,7 @@ class CommandController extends Controller
         });
 
         return response()->json([
+            'is_manual_mode' => (bool) $rover->is_manual_mode,
             'commands' => $commands->map(fn ($cmd) => [
                 'id' => $cmd->id,
                 'type' => $cmd->type,

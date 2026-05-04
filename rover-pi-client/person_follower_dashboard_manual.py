@@ -440,7 +440,17 @@ def fetch_pending_commands():
             timeout=DASHBOARD_REQUEST_TIMEOUT,
         )
         if response.status_code == 200:
-            return response.json().get("commands", [])
+            data = response.json()
+            is_manual_mode = data.get("is_manual_mode", False)
+            global manual_mode_enabled
+            if is_manual_mode and not manual_mode_enabled:
+                print("[DASHBOARD] Database indicates manual mode is enabled. Switching to manual.")
+                enter_manual_mode()
+            elif not is_manual_mode and manual_mode_enabled:
+                print("[DASHBOARD] Database indicates manual mode is disabled. Switching to automatic.")
+                exit_manual_mode()
+            
+            return data.get("commands", [])
 
         print(f"[DASHBOARD] Command fetch failed: {response.status_code} {response.text[:160]}")
     except Exception as e:

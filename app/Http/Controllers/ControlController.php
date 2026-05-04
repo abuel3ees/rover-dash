@@ -30,6 +30,7 @@ class ControlController extends Controller
                 'stream_port' => $rover->stream_port,
                 'last_seen_at' => $rover->last_seen_at,
                 'is_online' => $rover->isOnline(),
+                'is_manual_mode' => (bool) $rover->is_manual_mode,
             ],
             'latestTelemetry' => [
                 'gps' => $rover->latestTelemetry('gps'),
@@ -59,6 +60,12 @@ class ControlController extends Controller
                 ->where('status', 'pending')
                 ->whereIn('type', ['manual_override', 'move', 'rotate', 'speed', 'stop'])
                 ->update(['status' => 'expired']);
+        }
+
+        if ($command->type === 'manual_override') {
+            $rover->update(['is_manual_mode' => true]);
+        } elseif ($command->type === 'auto_follow') {
+            $rover->update(['is_manual_mode' => false]);
         }
 
         broadcast(new CommandSent($command))->toOthers();

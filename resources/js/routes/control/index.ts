@@ -1,7 +1,7 @@
 import { queryParams, type RouteQueryOptions, type RouteDefinition, type RouteFormDefinition } from './../../wayfinder'
 /**
 * @see \App\Http\Controllers\ControlController::command
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 export const command = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -16,7 +16,7 @@ command.definition = {
 
 /**
 * @see \App\Http\Controllers\ControlController::command
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 command.url = (options?: RouteQueryOptions) => {
@@ -25,7 +25,7 @@ command.url = (options?: RouteQueryOptions) => {
 
 /**
 * @see \App\Http\Controllers\ControlController::command
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 command.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
@@ -35,7 +35,7 @@ command.post = (options?: RouteQueryOptions): RouteDefinition<'post'> => ({
 
 /**
 * @see \App\Http\Controllers\ControlController::command
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 const commandForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
@@ -45,7 +45,7 @@ const commandForm = (options?: RouteQueryOptions): RouteFormDefinition<'post'> =
 
 /**
 * @see \App\Http\Controllers\ControlController::command
-* @see app/Http/Controllers/ControlController.php:43
+* @see app/Http/Controllers/ControlController.php:44
 * @route '/control/command'
 */
 commandForm.post = (options?: RouteQueryOptions): RouteFormDefinition<'post'> => ({
