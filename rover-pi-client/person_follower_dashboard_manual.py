@@ -762,6 +762,7 @@ def enter_manual_mode():
     global manual_mode_enabled, manual_override_until, manual_active_cmd
 
     reset_autonomous_state_for_manual()
+    clear_manual_override(stop=True)
 
     with manual_lock:
         manual_mode_enabled = True
@@ -776,6 +777,8 @@ def exit_manual_mode():
     """Return to automatic person following."""
     global manual_mode_enabled, manual_override_until, manual_active_cmd
     global auto_reacquire_until
+
+    clear_manual_override(stop=True)
 
     with manual_lock:
         manual_mode_enabled = False

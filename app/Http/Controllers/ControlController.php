@@ -54,11 +54,11 @@ class ControlController extends Controller
             'payload' => $request->validated('payload'),
         ]);
 
-        if (in_array($command->type, ['auto_follow', 'stop'], true)) {
+        if (in_array($command->type, ['auto_follow', 'manual_override', 'stop'], true)) {
             $rover->commands()
                 ->where('id', '<', $command->id)
                 ->where('status', 'pending')
-                ->whereIn('type', ['manual_override', 'move', 'rotate', 'speed', 'stop'])
+                ->whereIn('type', ['manual_override', 'auto_follow', 'move', 'rotate', 'speed', 'stop'])
                 ->update(['status' => 'expired']);
         }
 
