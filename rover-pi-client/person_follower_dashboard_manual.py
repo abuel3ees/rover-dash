@@ -447,6 +447,8 @@ def fetch_pending_commands():
             with manual_lock:
                 curr_manual_state = manual_mode_enabled
 
+            print(f"[DASHBOARD] Fetched DB flag: is_manual_mode={is_manual_mode}, Current Pi State: {curr_manual_state}")
+
             if is_manual_mode and not curr_manual_state:
                 print("[DASHBOARD] Database indicates manual mode is enabled. Switching to manual.")
                 enter_manual_mode()
